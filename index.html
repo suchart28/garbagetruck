@@ -29,7 +29,8 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-        import { getDatabase, ref, onValue, push, set } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+        // อัปเดต: นำเข้า get เพื่อใช้อ่านข้อมูลนับรหัสงาน
+        import { getDatabase, ref, onValue, push, set, get } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
@@ -81,13 +82,59 @@
             }
         });
 
-        window.sendReport = (type) => {
+        // อัปเดต: เปลี่ยนเป็น Async function เพื่อดึงและสร้างรหัสงาน
+        window.sendReport = async (type) => {
             const phone = document.getElementById('reporterPhone').value;
             if(!phone || !userLatLng) { alert("กรุณาระบุเบอร์โทรและรอระบุตำแหน่ง"); return; }
-            const newRef = push(ref(db, 'reports'));
-            set(newRef, { type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: Date.now(), status: 'pending' })
-            .then(() => { alert("แจ้งเหตุสำเร็จ"); closeModal(); });
+            
+            try {
+                // 1. สร้างรูปแบบวันที่ D[DD][MM][YY] เช่น D180469
+                const now = new Date();
+                const dd = String(now.getDate()).padStart(2, '0');
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const yy = String(now.getFullYear() + 543).slice(-2); // ปี พ.ศ. เอาแค่ 2 ตัวท้าย
+                const datePrefix = `D${dd}${mm}${yy}-`;
+
+                // 2. ตรวจสอบข้อมูลในระบบเพื่อหาว่าวันนี้รันไปถึงเลขไหนแล้ว
+                const snapshot = await get(ref(db, 'reports'));
+                let currentMax = 0;
+
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    Object.values(data).forEach(report => {
+                        if (report.reportId && report.reportId.startsWith(datePrefix)) {
+                            // ดึงตัวเลขหลังเครื่องหมาย "-" ออกมาเปรียบเทียบ
+                            const runNum = parseInt(report.reportId.split('-')[1]);
+                            if (runNum > currentMax) {
+                                currentMax = runNum;
+                            }
+                        }
+                    });
+                }
+                
+                // 3. รหัสงานใหม่ของวันนี้
+                const newReportId = datePrefix + (currentMax + 1);
+
+                // 4. บันทึกข้อมูลลงฐานข้อมูลพร้อมรหัสงาน
+                const newRef = push(ref(db, 'reports'));
+                await set(newRef, { 
+                    reportId: newReportId, // เพิ่มฟิลด์รหัสงาน
+                    type: type, 
+                    phone: phone, 
+                    lat: userLatLng.lat, 
+                    lng: userLatLng.lng, 
+                    timestamp: now.getTime(), 
+                    status: 'pending' 
+                });
+                
+                alert(`แจ้งเหตุสำเร็จ! รหัสอ้างอิงของคุณคือ: ${newReportId}`); 
+                closeModal();
+            } catch (error) {
+                console.error(error);
+                alert("เกิดข้อผิดพลาดในการแจ้งเหตุ กรุณาลองใหม่อีกครั้ง");
+            }
         };
+
         window.openModal = () => document.getElementById('reportModal').style.display = 'flex';
         window.closeModal = () => document.getElementById('reportModal').style.display = 'none';
     </script>
