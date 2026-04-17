@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="info-box">
-        <h3 style="margin-top:0; margin-bottom: 10px;">รถเก็บขยะเทศบาล</h3>
+        <h3 style="margin-top:0; margin-bottom: 5px;">รถเก็บขยะเทศบาล</h3>
         <div id="distance-info">กำลังค้นหาตำแหน่งของคุณ...</div>
     </div>
     <div id="map"></div>
@@ -19,7 +19,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-        // ตั้งค่า Firebase ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -34,38 +33,34 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // แสดงแผนที่ (ศูนย์กลางเริ่มต้นที่จังหวัดขอนแก่น)
         const map = L.map('map').setView([16.4322, 102.8236], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        let userLatLng = null;
-        let truckLatLng = null;
-        let userMarker = null;
-        let truckMarker = null;
+        let userLatLng = null, truckLatLng = null;
+        let userMarker = null, truckMarker = null;
 
-        // กำหนดไอคอน พร้อมใส่ iconAnchor เพื่อล็อกพิกัดตรงกลาง
+        // แก้ปัญหาหมุดลอยโดยกำหนด iconAnchor เป็นครึ่งหนึ่งของ iconSize (กึ่งกลางวงกลมพอดี)
         const truckIcon = L.divIcon({ 
             className: 'truck-icon truck-moving', 
             iconSize: [24, 24],
-            iconAnchor: [12, 12], 
+            iconAnchor: [12, 12], // ครึ่งหนึ่งของ 24
             html: '' 
         });
         
         const userIcon = L.divIcon({ 
             className: 'user-icon pulse-red', 
             iconSize: [16, 16],
-            iconAnchor: [8, 8], 
+            iconAnchor: [8, 8], // ครึ่งหนึ่งของ 16
             html: '' 
         });
 
-        // 1. หาตำแหน่งของผู้ใช้ (ประชาชน)
+        // 1. หาตำแหน่งผู้ใช้
         map.locate({setView: true, maxZoom: 16});
         map.on('locationfound', function(e) {
             userLatLng = e.latlng;
             if(!userMarker) {
-                // สร้างไอคอนแดง ไม่มี Popup ข้อความ
                 userMarker = L.marker(userLatLng, { icon: userIcon }).addTo(map);
             } else {
                 userMarker.setLatLng(userLatLng);
@@ -73,13 +68,8 @@
             calculateDistance();
         });
 
-        map.on('locationerror', function(e) {
-            document.getElementById('distance-info').innerHTML = "ไม่สามารถหาตำแหน่งของคุณได้ (กรุณาเปิด GPS)";
-        });
-
-        // 2. ติดตามตำแหน่งรถขยะจาก Firebase
-        const truckRef = ref(db, 'truckLocation');
-        onValue(truckRef, (snapshot) => {
+        // 2. รับพิกัดรถขยะ
+        onValue(ref(db, 'truckLocation'), (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 truckLatLng = L.latLng(data.lat, data.lng);
@@ -90,20 +80,16 @@
                 }
                 calculateDistance();
             } else {
-                document.getElementById('distance-info').innerHTML = "<span style='color:red;'>รถเก็บขยะไม่ได้ออกปฏิบัติงานในขณะนี้</span>";
-                if (truckMarker) { 
-                    map.removeLayer(truckMarker); 
-                    truckMarker = null; 
-                }
+                document.getElementById('distance-info').innerHTML = "<span style='color:red;'>รถไม่ได้ออกปฏิบัติงาน</span>";
+                if (truckMarker) { map.removeLayer(truckMarker); truckMarker = null; }
             }
         });
 
-        // 3. คำนวณระยะห่าง
         function calculateDistance() {
             const infoDiv = document.getElementById('distance-info');
             if (userLatLng && truckLatLng) {
                 const distanceMeters = userLatLng.distanceTo(truckLatLng);
-                let displayDist = distanceMeters > 1000 ? (distanceMeters / 1000).toFixed(2) + " กม." : Math.round(distanceMeters) + " เมตร";
+                const displayDist = distanceMeters > 1000 ? (distanceMeters / 1000).toFixed(2) + " กม." : Math.round(distanceMeters) + " ม.";
                 infoDiv.innerHTML = `ระยะห่างจากคุณ: <strong>${displayDist}</strong>`;
             }
         }
