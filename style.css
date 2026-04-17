@@ -4,11 +4,11 @@
 body, html { 
     margin: 0; padding: 0; height: 100%; 
     font-family: 'Chakra Petch', sans-serif; 
+    background-color: #f4f7f6;
 }
 
 #map { height: 100vh; width: 100vw; z-index: 1; }
 
-/* กล่องข้อมูลระยะห่าง (หน้าผู้ใช้) */
 .info-box {
     position: absolute;
     top: 20px;
@@ -23,11 +23,10 @@ body, html {
     min-width: 250px;
 }
 
-/* ตั้งค่าไอคอนพื้นฐานให้คำนวณขนาดรวมขอบ (สำคัญมากต่อการปักหมุด) */
+/* --- แก้ไข: ตั้งค่าให้ไอคอนแสดงผลแบบไม่มี Transform --- */
 .user-icon, .truck-icon {
     box-sizing: border-box;
     display: block;
-    transform-origin: center;
 }
 
 /* ไอคอนตำแหน่งของคุณ (สีแดงกระพริบ) */
@@ -38,14 +37,15 @@ body, html {
     box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
 }
 
+/* แก้ไข: กระพริบแค่แสงเงา (box-shadow) ไม่ยุ่งกับ transform แล้ว */
 .pulse-red {
-    animation: pulse-red-animation 2s infinite;
+    animation: pulse-red-animation 1.5s infinite;
 }
 
 @keyframes pulse-red-animation {
-    0% { transform: scale(0.9) translate(0, 0); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
-    70% { transform: scale(1) translate(0, 0); box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); }
-    100% { transform: scale(0.9) translate(0, 0); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+    70% { box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
 }
 
 /* ไอคอนรถขยะ (สีเขียวกระพริบ) */
@@ -56,14 +56,15 @@ body, html {
     box-shadow: 0 0 10px #28a745;
 }
 
+/* แก้ไข: กระพริบแค่แสงเงา (box-shadow) */
 .truck-moving {
     animation: pulse-green 1.5s infinite;
 }
 
 @keyframes pulse-green {
-    0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); }
-    100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
 }
 
 /* แผงควบคุม (หน้าคนขับ) */
