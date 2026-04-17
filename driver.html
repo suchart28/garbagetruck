@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบคนขับรถเก็บขยะ</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+    <div id="map"></div>
+    <div class="driver-panel">
+        <h3 style="margin-top:0;">สำหรับคนขับรถ</h3>
+        <p id="status">สถานะ: รอการเชื่อมต่อ GPS...</p>
+        <button id="toggleBtn">เริ่มแชร์ตำแหน่ง</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+        import { getDatabase, ref, set, remove } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+
+        // ตั้งค่า Firebase ของคุณ
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
+            authDomain: "suchartstudio-9a78d.firebaseapp.com",
+            databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            projectId: "suchartstudio-9a78d",
+            storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+            messagingSenderId: "953369646185",
+            appId: "1:953369646185:web:ad68f20b3ef395716ebef8",
+            measurementId: "G-7L7V9JEFT7"
+        };
+
+        // เริ่มต้นใช้งาน Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // ตั้งค่าแผนที่ OpenStreetMap
+        const map = L.map('map').setView([16.4322, 102.8236], 13); // พิกัดเริ่มต้น
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        let watchId = null;
+        let isTracking = false;
+        let driverMarker = null;
+
+        const truckIcon = L.divIcon({ className: 'truck-icon truck-moving', iconSize: [24, 24] });
+
+        // ฟังก์ชันเปิด/ปิดการแชร์ตำแหน่ง
+        function toggleTracking() {
+            const btn = document.getElementById('toggleBtn');
+            const statusText = document.getElementById('status');
+
+            if (!isTracking) {
+                if (navigator.geolocation) {
+                    watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
+                        enableHighAccuracy: true, maximumAge: 0, timeout: 5000
+                    });
+                    isTracking = true;
+                    btn.innerText = "หยุดแชร์ตำแหน่ง";
+                    btn.classList.add('stop');
+                    statusText.innerText = "สถานะ: กำลังแชร์ตำแหน่ง...";
+                    statusText.style.color = "green";
+                } else {
+                    alert("เบราว์เซอร์ของคุณไม่รองรับ GPS");
+                }
+            } else {
+                navigator.geolocation.clearWatch(watchId);
+                isTracking = false;
+                btn.innerText = "เริ่มแชร์ตำแหน่ง";
+                btn.classList.remove('stop');
+                statusText.innerText = "สถานะ: หยุดการทำงาน";
+                statusText.style.color = "red";
+                
+                // ลบพิกัดออกจากระบบเมื่อเลิกงาน
+                remove(ref(db, 'truckLocation'));
+            }
+        }
+
+        // เชื่อมต่อปุ่มกับฟังก์ชัน
+        document.getElementById('toggleBtn').addEventListener('click', toggleTracking);
+
+        function updatePosition(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            // อัปเดตพิกัดลง Firebase Database
+            set(ref(db, 'truckLocation'), { lat: lat, lng: lng, timestamp: Date.now() });
+
+            // แสดงจุดบนแผนที่ของคนขับ
+            if (!driverMarker) {
+                driverMarker = L.marker([lat, lng], {icon: truckIcon}).addTo(map);
+                map.setView([lat, lng], 16);
+            } else {
+                driverMarker.setLatLng([lat, lng]);
+            }
+        }
+
+        function handleError(error) {
+            console.error("GPS Error: ", error);
+            document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการหาพิกัด";
+        }
+    </script>
+</body>
+</html>
