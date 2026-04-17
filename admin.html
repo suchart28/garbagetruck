@@ -17,9 +17,12 @@
 
         <div id="admin-dashboard" class="hidden">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                     <h2>รายการแจ้งเหตุจากประชาชน</h2>
-                    <button onclick="location.reload()" style="width: auto; padding: 5px 15px;">รีเฟรชข้อมูล</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="printSummaryTable()" class="btn-success" style="width: auto; padding: 8px 15px;">🖨️ พิมพ์ตารางงาน (A4)</button>
+                        <button onclick="location.reload()" style="width: auto; padding: 8px 15px;">รีเฟรชข้อมูล</button>
+                    </div>
                 </div>
                 <table>
                     <thead>
@@ -57,6 +60,8 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        
+        let allReportsData = null; // เก็บข้อมูลไว้สำหรับตาราง A4
 
         window.loginAdmin = () => {
             if(document.getElementById('password').value === "987654321") {
@@ -69,6 +74,7 @@
         function loadAllReports() {
             onValue(ref(db, 'reports'), (snapshot) => {
                 const data = snapshot.val();
+                allReportsData = data; // บันทึกเข้าตัวแปรส่วนกลาง
                 const table = document.getElementById('reportTable');
                 table.innerHTML = "";
                 
@@ -95,7 +101,7 @@
                                     <option value="done" ${r.status==='done'?'selected':''}>เสร็จสิ้น</option>
                                 </select>
                                 <button onclick="viewMap(${r.lat}, ${r.lng})" class="btn-primary" style="width: auto; padding: 4px 8px; font-size: 11px;">📍 แผนที่</button>
-                                <button onclick="printTicket('${r.type}', '${r.phone || 'ไม่ระบุ'}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width: auto; padding: 4px 8px; font-size: 11px;">🖨️ พิมพ์ใบงาน</button>
+                                <button onclick="printTicket('${r.type}', '${r.phone || 'ไม่ระบุ'}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width: auto; padding: 4px 8px; font-size: 11px;">🖨️ ตั๋วงาน</button>
                                 <button onclick="deleteReport('${id}')" class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px;">ลบ</button>
                             </td>
                         </tr>
@@ -106,30 +112,22 @@
         }
 
         window.updateStatus = (id, newStatus) => { update(ref(db, `reports/${id}`), { status: newStatus }); };
-
         window.viewMap = (lat, lng) => { window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank'); };
+        window.deleteReport = (id) => { if(confirm("ต้องการลบข้อมูลนี้ออกจากระบบหรือไม่?")) remove(ref(db, `reports/${id}`)); };
 
-        window.deleteReport = (id) => {
-            if(confirm("ต้องการลบข้อมูลนี้ออกจากระบบหรือไม่?")) {
-                remove(ref(db, `reports/${id}`));
-            }
-        };
-
-        // --- ฟังก์ชันสำหรับสร้างใบสั่งงานและสั่งพิมพ์ ---
+        // 1. ฟังก์ชันพิมพ์ใบงานเดี่ยวพร้อม QR Code
         window.printTicket = (type, phone, time, lat, lng) => {
             const printSec = document.getElementById('print-section');
-            // ลิงก์สำหรับให้ QR Code นำทาง (Google Maps Directions)
             const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             
-            // สร้างแบบฟอร์มใบสั่งงาน
             printSec.innerHTML = `
                 <div class="ticket">
                     <h2>ใบสั่งงานเทศบาล</h2>
                     <div class="ticket-info">
                         <b>ประเภทปัญหา:</b> ${type}<br>
-                        <b>เบอร์ติดต่อผู้แจ้ง:</b> ${phone}<br>
-                        <b>วันเวลาที่รับแจ้ง:</b> ${time}<br>
-                        <b>พิกัด (Lat, Lng):</b> ${lat.toFixed(5)}, ${lng.toFixed(5)}
+                        <b>เบอร์ติดต่อ:</b> ${phone}<br>
+                        <b>เวลาแจ้ง:</b> ${time}<br>
+                        <b>พิกัด:</b> ${lat.toFixed(5)}, ${lng.toFixed(5)}
                     </div>
                     <div id="qrcode"></div>
                     <p style="font-size: 14px; font-weight: bold;">(สแกน QR Code ด้วยมือถือเพื่อเปิดแผนที่นำทาง)</p>
@@ -137,23 +135,85 @@
                 </div>
             `;
             
-            // สร้าง QR Code จากลิงก์
             new QRCode(document.getElementById("qrcode"), {
-                text: mapUrl,
-                width: 150,
-                height: 150,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
+                text: mapUrl, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff"
             });
 
-            // แสดงส่วนพิมพ์ -> สั่งเบราว์เซอร์พิมพ์ -> ซ่อนกลับตามเดิม
+            triggerPrint(printSec);
+        };
+
+        // 2. ฟังก์ชันพิมพ์ตารางงาน A4 สูงสุด 5 รายการ
+        window.printSummaryTable = () => {
+            if (!allReportsData) { alert("ไม่มีข้อมูลในระบบ"); return; }
+            
+            // กรองเอาเฉพาะงานที่ยังไม่เสร็จ (รอดำเนินการ / กำลังดำเนินการ)
+            let pendingTasks = [];
+            Object.keys(allReportsData).forEach(id => {
+                if(allReportsData[id].status !== 'done') {
+                    pendingTasks.push(allReportsData[id]);
+                }
+            });
+
+            if (pendingTasks.length === 0) { alert("ไม่มีงานที่ค้างอยู่"); return; }
+
+            // เลือกมาแค่ 5 รายการแรก
+            const tasksToPrint = pendingTasks.slice(0, 5);
+            
+            let tableRows = '';
+            tasksToPrint.forEach((r, index) => {
+                const time = new Date(r.timestamp).toLocaleString('th-TH');
+                tableRows += `
+                    <tr>
+                        <td style="text-align:center;">${index + 1}</td>
+                        <td>
+                            <b>${r.type}</b><br>
+                            <span style="font-size:14px; color:#555;">เวลา: ${time}</span>
+                        </td>
+                        <td>${r.phone || '-'}</td>
+                        <td style="font-size:14px;">Lat: ${r.lat.toFixed(5)}<br>Lng: ${r.lng.toFixed(5)}</td>
+                        <td style="width: 120px;"></td> </tr>
+                `;
+            });
+
+            const printSec = document.getElementById('print-section');
+            const currentDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            printSec.innerHTML = `
+                <div class="print-table-container">
+                    <h2>ตารางปฏิบัติงานเก็บขยะชิ้นใหญ่ / ล้นถัง</h2>
+                    <p><b>ประจำวันที่:</b> ${currentDate}</p>
+                    <table class="print-list-table">
+                        <thead>
+                            <tr>
+                                <th style="width:50px;">ลำดับ</th>
+                                <th>ประเภทปัญหา / เวลาแจ้ง</th>
+                                <th>เบอร์ติดต่อ</th>
+                                <th>พิกัด (GPS)</th>
+                                <th>ผลการปฏิบัติงาน<br>(ลายมือชื่อ)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+                        <div>ลงชื่อ .............................................................. พนักงานขับรถ</div>
+                        <div>ลงชื่อ .............................................................. หัวหน้าชุดปฏิบัติการ</div>
+                    </div>
+                </div>
+            `;
+
+            triggerPrint(printSec);
+        };
+
+        // ฟังก์ชันสั่งพิมพ์
+        function triggerPrint(printSec) {
             printSec.classList.remove('hidden');
             setTimeout(() => {
                 window.print();
                 printSec.classList.add('hidden');
-            }, 500); // หน่วงเวลาเล็กน้อยให้ QR Code สร้างเสร็จ
-        };
+            }, 300);
+        }
     </script>
 </body>
 </html>
