@@ -19,8 +19,8 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                     <h2>รายการแจ้งเหตุ</h2>
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="printSummaryTable()" class="btn-success">🖨️ พิมพ์ตาราง (A4)</button>
-                        <button onclick="logoutAdmin()" class="btn-danger" style="width:auto; padding:5px 15px;">Logout</button>
+                        <button onclick="printSummaryTable()" class="btn-success" style="width:auto; padding:8px 15px;">🖨️ พิมพ์ตาราง (A4)</button>
+                        <button onclick="logoutAdmin()" class="btn-danger" style="width:auto; padding:8px 15px;">Logout</button>
                     </div>
                 </div>
                 <table>
@@ -87,12 +87,13 @@
                         <td style="font-size:12px;">${time}</td>
                         <td><span class="status-badge status-${r.status}">${r.status}</span></td>
                         <td>
-                            <select onchange="updateStatus('${id}', this.value)" style="width:100px;">
+                            <select onchange="updateStatus('${id}', this.value)" style="width:100px; padding:5px;">
                                 <option value="pending" ${r.status==='pending'?'selected':''}>รอ</option>
                                 <option value="process" ${r.status==='process'?'selected':''}>ทำ</option>
                                 <option value="done" ${r.status==='done'?'selected':''}>เสร็จ</option>
                             </select>
-                            <button onclick="printTicket('${r.type}', '${r.phone}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width:auto; padding:2px 5px;">🖨️</button>
+                            <button onclick="printTicket('${r.type}', '${r.phone}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width:auto; padding:5px 8px;">🖨️</button>
+                            <button onclick="deleteReport('${id}')" class="btn-danger" style="width:auto; padding:5px 8px;">🗑️</button>
                         </td>
                     </tr>`;
                     table.innerHTML += row;
@@ -101,30 +102,68 @@
         }
 
         window.updateStatus = (id, newStatus) => { update(ref(db, `reports/${id}`), { status: newStatus }); };
+        window.deleteReport = (id) => { if(confirm("ลบข้อมูลนี้?")) remove(ref(db, `reports/${id}`)); };
         
+        // 1. ใบงานทางการแบบเดี่ยว
         window.printTicket = (type, phone, time, lat, lng) => {
             const printSec = document.getElementById('print-section');
             const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-            printSec.innerHTML = `<div class="ticket"><h2>ใบสั่งงาน</h2><b>${type}</b><br>โทร: ${phone}<br>เวลา: ${time}<br><div id="qrcode"></div><span>สแกนนำทาง</span></div>`;
-            new QRCode(document.getElementById("qrcode"), { text: mapUrl, width: 120, height: 120 });
+            printSec.innerHTML = `
+                <div class="ticket">
+                    <h2>ใบสั่งงานเทศบาล</h2>
+                    <div class="ticket-info">
+                        <b>ประเภทปัญหา:</b> ${type}<br>
+                        <b>เบอร์ติดต่อผู้แจ้ง:</b> ${phone}<br>
+                        <b>วันเวลาที่รับแจ้ง:</b> ${time}<br>
+                        <b>พิกัด (Lat, Lng):</b> ${lat.toFixed(5)}, ${lng.toFixed(5)}
+                    </div>
+                    <div id="qrcode"></div>
+                    <p style="font-size: 14px; font-weight: bold;">(สแกน QR Code เพื่อนำทาง)</p>
+                    <p style="margin-top:40px; border-top:1px solid #ccc; padding-top:10px;">ลายมือชื่อผู้ปฏิบัติงาน: ...........................................</p>
+                </div>`;
+            new QRCode(document.getElementById("qrcode"), { text: mapUrl, width: 150, height: 150 });
             printSec.classList.remove('hidden');
             setTimeout(() => { window.print(); printSec.classList.add('hidden'); }, 500);
         };
 
+        // 2. ตารางปฏิบัติงาน A4 (5 รายการ)
         window.printSummaryTable = () => {
             if (!allReports) return;
+            let pendingTasks = Object.keys(allReports).filter(id => allReports[id].status !== 'done').slice(0, 5);
+            if (pendingTasks.length === 0) { alert("ไม่มีงานค้าง"); return; }
+
             let rows = '';
-            Object.keys(allReports).slice(0, 5).forEach((id, idx) => {
+            pendingTasks.forEach((id, idx) => {
                 const r = allReports[id];
-                const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`;
-                rows += `<tr><td>${idx+1}</td><td>${r.type}<br>${r.phone}</td><td style="text-align:center;"><div id="qr-${idx}" class="row-qr"></div></td><td></td></tr>`;
+                const time = new Date(r.timestamp).toLocaleString('th-TH');
+                rows += `<tr>
+                    <td style="text-align:center;">${idx+1}</td>
+                    <td><b>${r.type}</b><br><small>${time}</small></td>
+                    <td>${r.phone || '-'}</td>
+                    <td style="text-align:center;"><div id="qr-${idx}" class="row-qr"></div></td>
+                    <td></td>
+                </tr>`;
             });
+
             const printSec = document.getElementById('print-section');
-            printSec.innerHTML = `<div class="print-table-container"><h2>ตารางงาน (A4)</h2><table class="print-list-table"><thead><tr><th>#</th><th>งาน / เบอร์</th><th>สแกนนำทาง</th><th>ชื่อผู้เก็บ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-            Object.keys(allReports).slice(0, 5).forEach((id, idx) => {
+            printSec.innerHTML = `
+                <div class="print-table-container">
+                    <h2 style="text-align:center;">ตารางปฏิบัติงานเก็บขยะ</h2>
+                    <table class="print-list-table">
+                        <thead><tr><th>#</th><th>งาน/เวลา</th><th>โทร</th><th style="width:100px;">สแกนนำทาง</th><th>ลายมือชื่อ</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+                        <div>ลงชื่อ .................................................. พนักงานขับรถ</div>
+                        <div>ลงชื่อ .................................................. หัวหน้าชุด</div>
+                    </div>
+                </div>`;
+
+            pendingTasks.forEach((id, idx) => {
                 const r = allReports[id];
-                new QRCode(document.getElementById(`qr-${idx}`), { text: `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`, width: 60, height: 60 });
+                new QRCode(document.getElementById(`qr-${idx}`), { text: `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`, width: 65, height: 65 });
             });
+
             printSec.classList.remove('hidden');
             setTimeout(() => { window.print(); printSec.classList.add('hidden'); }, 600);
         };
