@@ -61,7 +61,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         
-        let allReportsData = null; // เก็บข้อมูลไว้สำหรับตาราง A4
+        let allReportsData = null; 
 
         window.loginAdmin = () => {
             if(document.getElementById('password').value === "987654321") {
@@ -74,7 +74,7 @@
         function loadAllReports() {
             onValue(ref(db, 'reports'), (snapshot) => {
                 const data = snapshot.val();
-                allReportsData = data; // บันทึกเข้าตัวแปรส่วนกลาง
+                allReportsData = data;
                 const table = document.getElementById('reportTable');
                 table.innerHTML = "";
                 
@@ -115,9 +115,10 @@
         window.viewMap = (lat, lng) => { window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank'); };
         window.deleteReport = (id) => { if(confirm("ต้องการลบข้อมูลนี้ออกจากระบบหรือไม่?")) remove(ref(db, `reports/${id}`)); };
 
-        // 1. ฟังก์ชันพิมพ์ใบงานเดี่ยวพร้อม QR Code
+        // 1. ฟังก์ชันพิมพ์ใบงานเดี่ยว
         window.printTicket = (type, phone, time, lat, lng) => {
             const printSec = document.getElementById('print-section');
+            // ใช้ URL แบบนำทาง (Directions)
             const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             
             printSec.innerHTML = `
@@ -142,11 +143,10 @@
             triggerPrint(printSec);
         };
 
-        // 2. ฟังก์ชันพิมพ์ตารางงาน A4 สูงสุด 5 รายการ
+        // 2. ฟังก์ชันพิมพ์ตารางงาน A4 พร้อม QR Code ในแต่ละข้อ
         window.printSummaryTable = () => {
             if (!allReportsData) { alert("ไม่มีข้อมูลในระบบ"); return; }
             
-            // กรองเอาเฉพาะงานที่ยังไม่เสร็จ (รอดำเนินการ / กำลังดำเนินการ)
             let pendingTasks = [];
             Object.keys(allReportsData).forEach(id => {
                 if(allReportsData[id].status !== 'done') {
@@ -156,10 +156,9 @@
 
             if (pendingTasks.length === 0) { alert("ไม่มีงานที่ค้างอยู่"); return; }
 
-            // เลือกมาแค่ 5 รายการแรก
             const tasksToPrint = pendingTasks.slice(0, 5);
-            
             let tableRows = '';
+            
             tasksToPrint.forEach((r, index) => {
                 const time = new Date(r.timestamp).toLocaleString('th-TH');
                 tableRows += `
@@ -170,8 +169,12 @@
                             <span style="font-size:14px; color:#555;">เวลา: ${time}</span>
                         </td>
                         <td>${r.phone || '-'}</td>
-                        <td style="font-size:14px;">Lat: ${r.lat.toFixed(5)}<br>Lng: ${r.lng.toFixed(5)}</td>
-                        <td style="width: 120px;"></td> </tr>
+                        <td style="font-size:14px; text-align:center;">
+                            ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}
+                            <div id="qr-${index}" class="row-qr"></div>
+                        </td>
+                        <td style="width: 120px;"></td> 
+                    </tr>
                 `;
             });
 
@@ -188,7 +191,7 @@
                                 <th style="width:50px;">ลำดับ</th>
                                 <th>ประเภทปัญหา / เวลาแจ้ง</th>
                                 <th>เบอร์ติดต่อ</th>
-                                <th>พิกัด (GPS)</th>
+                                <th style="width:120px;">สแกนเพื่อนำทาง</th>
                                 <th>ผลการปฏิบัติงาน<br>(ลายมือชื่อ)</th>
                             </tr>
                         </thead>
@@ -203,16 +206,29 @@
                 </div>
             `;
 
+            // วนลูปสร้าง QR Code ใส่ลงไปในช่องแต่ละแถว
+            tasksToPrint.forEach((r, index) => {
+                // ลิงก์สำหรับการนำทาง
+                const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`;
+                new QRCode(document.getElementById(`qr-${index}`), {
+                    text: mapUrl,
+                    width: 70, // ขนาดเล็กพอดีตาราง
+                    height: 70,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.L // ระดับ L เพื่อให้ลายไม่แน่นเกินไป สแกนง่าย
+                });
+            });
+
             triggerPrint(printSec);
         };
 
-        // ฟังก์ชันสั่งพิมพ์
         function triggerPrint(printSec) {
             printSec.classList.remove('hidden');
             setTimeout(() => {
                 window.print();
                 printSec.classList.add('hidden');
-            }, 300);
+            }, 500); // หน่วงเวลาให้ QR Code ประมวลผลเสร็จ
         }
     </script>
 </body>
