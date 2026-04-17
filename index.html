@@ -33,6 +33,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
+        // จุดศูนย์กลางเริ่มต้น (ขอนแก่น)
         const map = L.map('map').setView([16.4322, 102.8236], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
@@ -41,18 +42,18 @@
         let userLatLng = null, truckLatLng = null;
         let userMarker = null, truckMarker = null;
 
-        // แก้ปัญหาหมุดลอยโดยกำหนด iconAnchor เป็นครึ่งหนึ่งของ iconSize (กึ่งกลางวงกลมพอดี)
+        // กำหนด Anchor ให้อยู่กึ่งกลางไอคอนเพื่อปักหมุดให้แน่น
         const truckIcon = L.divIcon({ 
             className: 'truck-icon truck-moving', 
             iconSize: [24, 24],
-            iconAnchor: [12, 12], // ครึ่งหนึ่งของ 24
+            iconAnchor: [12, 12], 
             html: '' 
         });
         
         const userIcon = L.divIcon({ 
             className: 'user-icon pulse-red', 
             iconSize: [16, 16],
-            iconAnchor: [8, 8], // ครึ่งหนึ่งของ 16
+            iconAnchor: [8, 8], 
             html: '' 
         });
 
