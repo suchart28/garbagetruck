@@ -14,34 +14,22 @@
             <input type="password" id="password" placeholder="ใส่รหัสผ่านแอดมิน">
             <button onclick="loginAdmin()" class="btn-primary">เข้าสู่ระบบ</button>
         </div>
-
         <div id="admin-dashboard" class="hidden">
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                    <h2>รายการแจ้งเหตุจากประชาชน</h2>
+                    <h2>รายการแจ้งเหตุ</h2>
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="printSummaryTable()" class="btn-success" style="width: auto; padding: 8px 15px;">🖨️ พิมพ์ตาราง (A4)</button>
-                        <button onclick="location.reload()" style="width: auto; padding: 8px 15px;">รีเฟรช</button>
-                        <button onclick="logoutAdmin()" class="btn-danger" style="width: auto; padding: 8px 15px;">ออกจากระบบ</button>
+                        <button onclick="printSummaryTable()" class="btn-success">🖨️ พิมพ์ตาราง (A4)</button>
+                        <button onclick="logoutAdmin()" class="btn-danger" style="width:auto; padding:5px 15px;">Logout</button>
                     </div>
                 </div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>ประเภท</th>
-                            <th>เบอร์ติดต่อ</th>
-                            <th>เวลาที่แจ้ง</th>
-                            <th>สถานะ</th>
-                            <th>จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reportTable">
-                        </tbody>
+                    <thead><tr><th>ประเภท</th><th>เบอร์ติดต่อ</th><th>เวลาที่แจ้ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                    <tbody id="reportTable"></tbody>
                 </table>
             </div>
         </div>
     </div>
-
     <div id="print-section" class="hidden"></div>
 
     <script type="module">
@@ -61,9 +49,8 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        let allReportsData = null; 
+        let allReports = null;
 
-        // --- เพิ่มระบบจดจำรหัสผ่าน ---
         window.onload = () => {
             if (localStorage.getItem('isAdminLoggedIn') === 'true') {
                 document.getElementById('login-section').classList.add('hidden');
@@ -74,143 +61,73 @@
 
         window.loginAdmin = () => {
             if(document.getElementById('password').value === "987654321") {
-                localStorage.setItem('isAdminLoggedIn', 'true'); // บันทึกสถานะการล็อกอิน
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('admin-dashboard').classList.remove('hidden');
-                loadAllReports();
+                localStorage.setItem('isAdminLoggedIn', 'true');
+                location.reload();
             } else { alert("รหัสผ่านไม่ถูกต้อง"); }
         };
 
         window.logoutAdmin = () => {
-            localStorage.removeItem('isAdminLoggedIn'); // ลบการจำรหัสผ่าน
+            localStorage.removeItem('isAdminLoggedIn');
             location.reload();
         };
-        // ------------------------------
 
         function loadAllReports() {
             onValue(ref(db, 'reports'), (snapshot) => {
                 const data = snapshot.val();
-                allReportsData = data;
+                allReports = data;
                 const table = document.getElementById('reportTable');
                 table.innerHTML = "";
-                
-                if (!data) { table.innerHTML = "<tr><td colspan='5' style='text-align:center'>ไม่มีข้อมูลการแจ้งเหตุ</td></tr>"; return; }
-
+                if (!data) return;
                 Object.keys(data).forEach(id => {
                     const r = data[id];
                     const time = new Date(r.timestamp).toLocaleString('th-TH');
-                    const phoneDisplay = r.phone ? r.phone : '<span style="color:#aaa;">ไม่ระบุ</span>';
-                    
-                    let statusClass = r.status === 'pending' ? 'status-pending' : (r.status === 'process' ? 'status-process' : 'status-done');
-                    let statusText = r.status === 'pending' ? 'รอดำเนินการ' : (r.status === 'process' ? 'กำลังดำเนินการ' : 'เสร็จสิ้น');
-
-                    const row = `
-                        <tr>
-                            <td><b>${r.type}</b></td>
-                            <td>${phoneDisplay}</td>
-                            <td style="font-size: 13px;">${time}</td>
-                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                            <td>
-                                <select onchange="updateStatus('${id}', this.value)" style="width: 120px; font-size: 12px; margin: 0;">
-                                    <option value="pending" ${r.status==='pending'?'selected':''}>รอดำเนินการ</option>
-                                    <option value="process" ${r.status==='process'?'selected':''}>กำลังดำเนินการ</option>
-                                    <option value="done" ${r.status==='done'?'selected':''}>เสร็จสิ้น</option>
-                                </select>
-                                <button onclick="viewMap(${r.lat}, ${r.lng})" class="btn-primary" style="width: auto; padding: 4px 8px; font-size: 11px;">📍 แผนที่</button>
-                                <button onclick="printTicket('${r.type}', '${r.phone || 'ไม่ระบุ'}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width: auto; padding: 4px 8px; font-size: 11px;">🖨️ ตั๋วงาน</button>
-                                <button onclick="deleteReport('${id}')" class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px;">ลบ</button>
-                            </td>
-                        </tr>
-                    `;
+                    const row = `<tr>
+                        <td><b>${r.type}</b></td>
+                        <td>${r.phone || '-'}</td>
+                        <td style="font-size:12px;">${time}</td>
+                        <td><span class="status-badge status-${r.status}">${r.status}</span></td>
+                        <td>
+                            <select onchange="updateStatus('${id}', this.value)" style="width:100px;">
+                                <option value="pending" ${r.status==='pending'?'selected':''}>รอ</option>
+                                <option value="process" ${r.status==='process'?'selected':''}>ทำ</option>
+                                <option value="done" ${r.status==='done'?'selected':''}>เสร็จ</option>
+                            </select>
+                            <button onclick="printTicket('${r.type}', '${r.phone}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width:auto; padding:2px 5px;">🖨️</button>
+                        </td>
+                    </tr>`;
                     table.innerHTML += row;
                 });
             });
         }
 
         window.updateStatus = (id, newStatus) => { update(ref(db, `reports/${id}`), { status: newStatus }); };
-        window.viewMap = (lat, lng) => { window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank'); };
-        window.deleteReport = (id) => { if(confirm("ต้องการลบข้อมูลนี้ออกจากระบบหรือไม่?")) remove(ref(db, `reports/${id}`)); };
-
+        
         window.printTicket = (type, phone, time, lat, lng) => {
             const printSec = document.getElementById('print-section');
             const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-            
-            printSec.innerHTML = `
-                <div class="ticket">
-                    <h2>ใบสั่งงานเทศบาล</h2>
-                    <div class="ticket-info">
-                        <b>ประเภทปัญหา:</b> ${type}<br>
-                        <b>เบอร์ติดต่อ:</b> ${phone}<br>
-                        <b>เวลาแจ้ง:</b> ${time}<br>
-                        <b>พิกัด:</b> ${lat.toFixed(5)}, ${lng.toFixed(5)}
-                    </div>
-                    <div id="qrcode"></div>
-                    <p style="font-size: 14px; font-weight: bold;">(สแกน QR Code ด้วยมือถือเพื่อเปิดแผนที่นำทาง)</p>
-                    <p style="margin-top:40px; border-top:1px solid #ccc; padding-top:10px;">ลายมือชื่อผู้ปฏิบัติงาน: ...........................................</p>
-                </div>
-            `;
-            
-            new QRCode(document.getElementById("qrcode"), { text: mapUrl, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff" });
-            triggerPrint(printSec);
+            printSec.innerHTML = `<div class="ticket"><h2>ใบสั่งงาน</h2><b>${type}</b><br>โทร: ${phone}<br>เวลา: ${time}<br><div id="qrcode"></div><span>สแกนนำทาง</span></div>`;
+            new QRCode(document.getElementById("qrcode"), { text: mapUrl, width: 120, height: 120 });
+            printSec.classList.remove('hidden');
+            setTimeout(() => { window.print(); printSec.classList.add('hidden'); }, 500);
         };
 
         window.printSummaryTable = () => {
-            if (!allReportsData) { alert("ไม่มีข้อมูลในระบบ"); return; }
-            let pendingTasks = [];
-            Object.keys(allReportsData).forEach(id => { if(allReportsData[id].status !== 'done') pendingTasks.push(allReportsData[id]); });
-            if (pendingTasks.length === 0) { alert("ไม่มีงานที่ค้างอยู่"); return; }
-
-            const tasksToPrint = pendingTasks.slice(0, 5);
-            let tableRows = '';
-            
-            tasksToPrint.forEach((r, index) => {
-                const time = new Date(r.timestamp).toLocaleString('th-TH');
-                tableRows += `
-                    <tr>
-                        <td style="text-align:center;">${index + 1}</td>
-                        <td><b>${r.type}</b><br><span style="font-size:14px; color:#555;">เวลา: ${time}</span></td>
-                        <td>${r.phone || '-'}</td>
-                        <td style="font-size:14px; text-align:center;">
-                            ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}
-                            <div id="qr-${index}" class="row-qr"></div>
-                        </td>
-                        <td style="width: 120px;"></td> 
-                    </tr>
-                `;
-            });
-
-            const printSec = document.getElementById('print-section');
-            const currentDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-
-            printSec.innerHTML = `
-                <div class="print-table-container">
-                    <h2>ตารางปฏิบัติงานเก็บขยะชิ้นใหญ่ / ล้นถัง</h2>
-                    <p><b>ประจำวันที่:</b> ${currentDate}</p>
-                    <table class="print-list-table">
-                        <thead>
-                            <tr><th style="width:50px;">ลำดับ</th><th>ประเภทปัญหา / เวลาแจ้ง</th><th>เบอร์ติดต่อ</th><th style="width:120px;">สแกนเพื่อนำทาง</th><th>ผลการปฏิบัติงาน<br>(ลายมือชื่อ)</th></tr>
-                        </thead>
-                        <tbody>${tableRows}</tbody>
-                    </table>
-                    <div style="margin-top: 30px; display: flex; justify-content: space-between;">
-                        <div>ลงชื่อ .............................................................. พนักงานขับรถ</div>
-                        <div>ลงชื่อ .............................................................. หัวหน้าชุดปฏิบัติการ</div>
-                    </div>
-                </div>
-            `;
-
-            tasksToPrint.forEach((r, index) => {
+            if (!allReports) return;
+            let rows = '';
+            Object.keys(allReports).slice(0, 5).forEach((id, idx) => {
+                const r = allReports[id];
                 const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`;
-                new QRCode(document.getElementById(`qr-${index}`), { text: mapUrl, width: 70, height: 70, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
+                rows += `<tr><td>${idx+1}</td><td>${r.type}<br>${r.phone}</td><td style="text-align:center;"><div id="qr-${idx}" class="row-qr"></div></td><td></td></tr>`;
             });
-
-            triggerPrint(printSec);
-        };
-
-        function triggerPrint(printSec) {
+            const printSec = document.getElementById('print-section');
+            printSec.innerHTML = `<div class="print-table-container"><h2>ตารางงาน (A4)</h2><table class="print-list-table"><thead><tr><th>#</th><th>งาน / เบอร์</th><th>สแกนนำทาง</th><th>ชื่อผู้เก็บ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+            Object.keys(allReports).slice(0, 5).forEach((id, idx) => {
+                const r = allReports[id];
+                new QRCode(document.getElementById(`qr-${idx}`), { text: `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`, width: 60, height: 60 });
+            });
             printSec.classList.remove('hidden');
-            setTimeout(() => { window.print(); printSec.classList.add('hidden'); }, 500); 
-        }
+            setTimeout(() => { window.print(); printSec.classList.add('hidden'); }, 600);
+        };
     </script>
 </body>
 </html>
