@@ -1,7 +1,14 @@
-body, html { margin: 0; padding: 0; height: 100%; font-family: 'Kanit', sans-serif; }
+/* เพิ่มฟอนต์ Chakra Petch จาก Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;700&display=swap');
+
+body, html { 
+    margin: 0; padding: 0; height: 100%; 
+    font-family: 'Chakra Petch', sans-serif; 
+}
+
 #map { height: 100vh; width: 100vw; z-index: 1; }
 
-/* กล่องข้อมูลสำหรับผู้ใช้งาน */
+/* กล่องข้อมูล */
 .info-box {
     position: absolute;
     top: 20px;
@@ -16,7 +23,43 @@ body, html { margin: 0; padding: 0; height: 100%; font-family: 'Kanit', sans-ser
     min-width: 250px;
 }
 
-/* แผงควบคุมสำหรับคนขับ */
+/* ไอคอนตำแหน่งของคุณ (สีแดงกระพริบ) */
+.user-icon {
+    background-color: #ff0000;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.pulse-red {
+    animation: pulse-red-animation 2s infinite;
+}
+
+@keyframes pulse-red-animation {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+}
+
+/* ไอคอนรถขยะ (สีเขียวกระพริบ) */
+.truck-icon {
+    background-color: #28a745;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 10px #28a745;
+}
+
+.truck-moving {
+    animation: pulse-green 1.5s infinite;
+}
+
+@keyframes pulse-green {
+    0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); }
+    100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+/* แผงควบคุมคนขับ */
 .driver-panel {
     position: absolute;
     bottom: 30px;
@@ -31,7 +74,7 @@ body, html { margin: 0; padding: 0; height: 100%; font-family: 'Kanit', sans-ser
 }
 
 button {
-    padding: 10px 20px;
+    padding: 12px 24px;
     font-size: 16px;
     border: none;
     border-radius: 5px;
@@ -39,23 +82,6 @@ button {
     background-color: #007bff;
     color: white;
     font-weight: bold;
+    font-family: 'Chakra Petch', sans-serif;
 }
 button.stop { background-color: #dc3545; }
-
-/* ไอคอนรถขยะสีเขียวพร้อมเอฟเฟกต์กระพริบ (Pulse) */
-.truck-icon {
-    background-color: #28a745;
-    border-radius: 50%;
-    border: 3px solid white;
-    box-shadow: 0 0 10px #28a745;
-}
-
-.truck-moving {
-    animation: pulse-green 1.5s infinite;
-}
-
-@keyframes pulse-green {
-    0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); }
-    100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-}
