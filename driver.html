@@ -9,6 +9,7 @@
 <body>
     <div class="driver-panel">
         <h2>ระบบคนขับ (GPS)</h2>
+        
         <div id="login-section">
             <input type="password" id="password" placeholder="ใส่รหัสผ่านคนขับ">
             <button onclick="loginDriver()" class="btn-primary">ยืนยันรหัสผ่าน</button>
@@ -19,6 +20,7 @@
                 <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ก-123)">
                 <input type="text" id="routeName" placeholder="สาย/เส้นทาง">
                 <button onclick="startSharing()" class="btn-success">เริ่มแชร์ตำแหน่ง</button>
+                <button onclick="logoutDriver()" class="btn-danger" style="margin-top: 15px; background-color: #6c757d;">ออกจากระบบ</button>
             </div>
             
             <div id="sharing-status" class="hidden">
@@ -50,12 +52,27 @@
         const db = getDatabase(app);
         const truckRef = ref(db, 'truckLocation');
 
+        // --- เพิ่มระบบจดจำรหัสผ่าน ---
+        window.onload = () => {
+            if (localStorage.getItem('isDriverLoggedIn') === 'true') {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('active-section').classList.remove('hidden');
+            }
+        };
+
         window.loginDriver = () => {
             if(document.getElementById('password').value === "987654321") {
+                localStorage.setItem('isDriverLoggedIn', 'true'); // บันทึกสถานะ
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('active-section').classList.remove('hidden');
             } else { alert("รหัสผ่านไม่ถูกต้อง"); }
         };
+
+        window.logoutDriver = () => {
+            localStorage.removeItem('isDriverLoggedIn'); // ลบการจำรหัสผ่าน
+            location.reload();
+        };
+        // ------------------------------
 
         window.startSharing = () => {
             const tNo = document.getElementById('truckNo').value;
