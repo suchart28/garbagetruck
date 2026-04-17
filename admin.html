@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการงานแจ้งเหตุ (Admin)</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <div class="admin-container">
@@ -37,6 +38,8 @@
         </div>
     </div>
 
+    <div id="print-section" class="hidden"></div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
@@ -68,7 +71,7 @@
                 const data = snapshot.val();
                 const table = document.getElementById('reportTable');
                 table.innerHTML = "";
-                // อัปเดต colspan เป็น 5 เนื่องจากเพิ่มคอลัมน์เบอร์โทร
+                
                 if (!data) { table.innerHTML = "<tr><td colspan='5' style='text-align:center'>ไม่มีข้อมูลการแจ้งเหตุ</td></tr>"; return; }
 
                 Object.keys(data).forEach(id => {
@@ -91,7 +94,8 @@
                                     <option value="process" ${r.status==='process'?'selected':''}>กำลังดำเนินการ</option>
                                     <option value="done" ${r.status==='done'?'selected':''}>เสร็จสิ้น</option>
                                 </select>
-                                <button onclick="viewMap(${r.lat}, ${r.lng})" class="btn-primary" style="width: auto; padding: 4px 8px; font-size: 11px;">📍 ดูแผนที่</button>
+                                <button onclick="viewMap(${r.lat}, ${r.lng})" class="btn-primary" style="width: auto; padding: 4px 8px; font-size: 11px;">📍 แผนที่</button>
+                                <button onclick="printTicket('${r.type}', '${r.phone || 'ไม่ระบุ'}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width: auto; padding: 4px 8px; font-size: 11px;">🖨️ พิมพ์ใบงาน</button>
                                 <button onclick="deleteReport('${id}')" class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px;">ลบ</button>
                             </td>
                         </tr>
@@ -101,18 +105,54 @@
             });
         }
 
-        window.updateStatus = (id, newStatus) => {
-            update(ref(db, `reports/${id}`), { status: newStatus });
-        };
+        window.updateStatus = (id, newStatus) => { update(ref(db, `reports/${id}`), { status: newStatus }); };
 
-        window.viewMap = (lat, lng) => {
-            window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
-        };
+        window.viewMap = (lat, lng) => { window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank'); };
 
         window.deleteReport = (id) => {
             if(confirm("ต้องการลบข้อมูลนี้ออกจากระบบหรือไม่?")) {
                 remove(ref(db, `reports/${id}`));
             }
+        };
+
+        // --- ฟังก์ชันสำหรับสร้างใบสั่งงานและสั่งพิมพ์ ---
+        window.printTicket = (type, phone, time, lat, lng) => {
+            const printSec = document.getElementById('print-section');
+            // ลิงก์สำหรับให้ QR Code นำทาง (Google Maps Directions)
+            const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            
+            // สร้างแบบฟอร์มใบสั่งงาน
+            printSec.innerHTML = `
+                <div class="ticket">
+                    <h2>ใบสั่งงานเทศบาล</h2>
+                    <div class="ticket-info">
+                        <b>ประเภทปัญหา:</b> ${type}<br>
+                        <b>เบอร์ติดต่อผู้แจ้ง:</b> ${phone}<br>
+                        <b>วันเวลาที่รับแจ้ง:</b> ${time}<br>
+                        <b>พิกัด (Lat, Lng):</b> ${lat.toFixed(5)}, ${lng.toFixed(5)}
+                    </div>
+                    <div id="qrcode"></div>
+                    <p style="font-size: 14px; font-weight: bold;">(สแกน QR Code ด้วยมือถือเพื่อเปิดแผนที่นำทาง)</p>
+                    <p style="margin-top:40px; border-top:1px solid #ccc; padding-top:10px;">ลายมือชื่อผู้ปฏิบัติงาน: ...........................................</p>
+                </div>
+            `;
+            
+            // สร้าง QR Code จากลิงก์
+            new QRCode(document.getElementById("qrcode"), {
+                text: mapUrl,
+                width: 150,
+                height: 150,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            // แสดงส่วนพิมพ์ -> สั่งเบราว์เซอร์พิมพ์ -> ซ่อนกลับตามเดิม
+            printSec.classList.remove('hidden');
+            setTimeout(() => {
+                window.print();
+                printSec.classList.add('hidden');
+            }, 500); // หน่วงเวลาเล็กน้อยให้ QR Code สร้างเสร็จ
         };
     </script>
 </body>
