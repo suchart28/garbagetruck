@@ -4,7 +4,6 @@
 body, html { 
     margin: 0; padding: 0; height: 100%; 
     font-family: 'Chakra Petch', sans-serif; 
-    background-color: #f4f7f6; /* สำหรับหน้า driver */
 }
 
 #map { height: 100vh; width: 100vw; z-index: 1; }
@@ -24,13 +23,19 @@ body, html {
     min-width: 250px;
 }
 
+/* ตั้งค่าไอคอนพื้นฐานให้คำนวณขนาดรวมขอบ (สำคัญมากต่อการปักหมุด) */
+.user-icon, .truck-icon {
+    box-sizing: border-box;
+    display: block;
+    transform-origin: center;
+}
+
 /* ไอคอนตำแหน่งของคุณ (สีแดงกระพริบ) */
 .user-icon {
     background-color: #ff0000;
     border-radius: 50%;
     border: 2px solid white;
     box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
-    display: block; /* ป้องกันไอคอนหาย */
 }
 
 .pulse-red {
@@ -38,9 +43,9 @@ body, html {
 }
 
 @keyframes pulse-red-animation {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+    0% { transform: scale(0.9) translate(0, 0); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+    70% { transform: scale(1) translate(0, 0); box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); }
+    100% { transform: scale(0.9) translate(0, 0); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
 }
 
 /* ไอคอนรถขยะ (สีเขียวกระพริบ) */
@@ -49,7 +54,6 @@ body, html {
     border-radius: 50%;
     border: 2px solid white;
     box-shadow: 0 0 10px #28a745;
-    display: block; /* ป้องกันไอคอนหาย */
 }
 
 .truck-moving {
@@ -71,21 +75,18 @@ body, html {
     text-align: center;
     width: 80%;
     max-width: 350px;
-    
-    /* จัดให้อยู่กึ่งกลางหน้าจอสำหรับโหมดไม่มีแผนที่ */
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    z-index: 1001;
 }
 
-.driver-panel h2 { margin-top: 0; color: #333; }
 .status-box {
     padding: 15px;
     background-color: #e9ecef;
     border-radius: 8px;
     margin-bottom: 20px;
-    font-size: 16px;
 }
 
 button {
@@ -99,7 +100,6 @@ button {
     color: white;
     font-weight: bold;
     font-family: 'Chakra Petch', sans-serif;
-    transition: 0.3s;
 }
 button.stop { background-color: #dc3545; }
 .success { color: #28a745; font-weight: bold; }
