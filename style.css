@@ -1,14 +1,15 @@
-/* เพิ่มฟอนต์ Chakra Petch จาก Google Fonts */
+/* นำเข้าฟอนต์ Chakra Petch จาก Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;700&display=swap');
 
 body, html { 
     margin: 0; padding: 0; height: 100%; 
     font-family: 'Chakra Petch', sans-serif; 
+    background-color: #f4f7f6; /* สำหรับหน้า driver */
 }
 
 #map { height: 100vh; width: 100vw; z-index: 1; }
 
-/* กล่องข้อมูล */
+/* กล่องข้อมูลระยะห่าง (หน้าผู้ใช้) */
 .info-box {
     position: absolute;
     top: 20px;
@@ -29,6 +30,7 @@ body, html {
     border-radius: 50%;
     border: 2px solid white;
     box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+    display: block; /* ป้องกันไอคอนหาย */
 }
 
 .pulse-red {
@@ -47,6 +49,7 @@ body, html {
     border-radius: 50%;
     border: 2px solid white;
     box-shadow: 0 0 10px #28a745;
+    display: block; /* ป้องกันไอคอนหาย */
 }
 
 .truck-moving {
@@ -59,29 +62,45 @@ body, html {
     100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
 }
 
-/* แผงควบคุมคนขับ */
+/* แผงควบคุม (หน้าคนขับ) */
 .driver-panel {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
     background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     text-align: center;
+    width: 80%;
+    max-width: 350px;
+    
+    /* จัดให้อยู่กึ่งกลางหน้าจอสำหรับโหมดไม่มีแผนที่ */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.driver-panel h2 { margin-top: 0; color: #333; }
+.status-box {
+    padding: 15px;
+    background-color: #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 16px;
 }
 
 button {
-    padding: 12px 24px;
-    font-size: 16px;
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
     background-color: #007bff;
     color: white;
     font-weight: bold;
     font-family: 'Chakra Petch', sans-serif;
+    transition: 0.3s;
 }
 button.stop { background-color: #dc3545; }
+.success { color: #28a745; font-weight: bold; }
+.danger { color: #dc3545; font-weight: bold; }
