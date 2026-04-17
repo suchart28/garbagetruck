@@ -24,6 +24,7 @@
                     <thead>
                         <tr>
                             <th>ประเภท</th>
+                            <th>เบอร์ติดต่อ</th>
                             <th>เวลาที่แจ้ง</th>
                             <th>สถานะ</th>
                             <th>จัดการ</th>
@@ -67,17 +68,21 @@
                 const data = snapshot.val();
                 const table = document.getElementById('reportTable');
                 table.innerHTML = "";
-                if (!data) { table.innerHTML = "<tr><td colspan='4' style='text-align:center'>ไม่มีข้อมูลการแจ้งเหตุ</td></tr>"; return; }
+                // อัปเดต colspan เป็น 5 เนื่องจากเพิ่มคอลัมน์เบอร์โทร
+                if (!data) { table.innerHTML = "<tr><td colspan='5' style='text-align:center'>ไม่มีข้อมูลการแจ้งเหตุ</td></tr>"; return; }
 
                 Object.keys(data).forEach(id => {
                     const r = data[id];
                     const time = new Date(r.timestamp).toLocaleString('th-TH');
+                    const phoneDisplay = r.phone ? r.phone : '<span style="color:#aaa;">ไม่ระบุ</span>';
+                    
                     let statusClass = r.status === 'pending' ? 'status-pending' : (r.status === 'process' ? 'status-process' : 'status-done');
                     let statusText = r.status === 'pending' ? 'รอดำเนินการ' : (r.status === 'process' ? 'กำลังดำเนินการ' : 'เสร็จสิ้น');
 
                     const row = `
                         <tr>
                             <td><b>${r.type}</b></td>
+                            <td>${phoneDisplay}</td>
                             <td style="font-size: 13px;">${time}</td>
                             <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                             <td>
@@ -86,8 +91,8 @@
                                     <option value="process" ${r.status==='process'?'selected':''}>กำลังดำเนินการ</option>
                                     <option value="done" ${r.status==='done'?'selected':''}>เสร็จสิ้น</option>
                                 </select>
-                                <button onclick="viewMap(${r.lat}, ${r.lng})" class="btn-primary" style="width: auto; padding: 2px 8px; font-size: 11px;">แผนที่</button>
-                                <button onclick="deleteReport('${id}')" class="btn-danger" style="width: auto; padding: 2px 8px; font-size: 11px;">ลบ</button>
+                                <button onclick="viewMap(${r.lat}, ${r.lng})" class="btn-primary" style="width: auto; padding: 4px 8px; font-size: 11px;">📍 ดูแผนที่</button>
+                                <button onclick="deleteReport('${id}')" class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px;">ลบ</button>
                             </td>
                         </tr>
                     `;
@@ -105,7 +110,7 @@
         };
 
         window.deleteReport = (id) => {
-            if(confirm("ต้องการลบข้อมูลนี้หรือไม่?")) {
+            if(confirm("ต้องการลบข้อมูลนี้ออกจากระบบหรือไม่?")) {
                 remove(ref(db, `reports/${id}`));
             }
         };
