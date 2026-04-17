@@ -9,24 +9,21 @@
 <body>
     <div class="driver-panel">
         <h2>ระบบคนขับ (GPS)</h2>
-        
         <div id="login-section">
             <input type="password" id="password" placeholder="ใส่รหัสผ่านคนขับ">
-            <button onclick="loginDriver()" class="btn-primary">ยืนยันรหัสผ่าน</button>
+            <button onclick="loginDriver()" class="btn-primary">เข้าสู่ระบบ</button>
         </div>
-
         <div id="active-section" class="hidden">
             <div id="setup-section">
                 <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ก-123)">
                 <input type="text" id="routeName" placeholder="สาย/เส้นทาง">
                 <button onclick="startSharing()" class="btn-success">เริ่มแชร์ตำแหน่ง</button>
-                <button onclick="logoutDriver()" class="btn-danger" style="margin-top: 15px; background-color: #6c757d;">ออกจากระบบ</button>
+                <button onclick="logoutDriver()" class="btn-danger" style="background:#6c757d; margin-top:20px;">ออกจากระบบ</button>
             </div>
-            
             <div id="sharing-status" class="hidden">
                 <div style="background: #e9ecef; padding: 20px; border-radius: 8px;">
-                    <h3 style="color: #28a745; margin: 0;">● กำลังส่งพิกัดพิกัด...</h3>
-                    <p id="truckDisplay" style="font-weight: bold;"></p>
+                    <h3 style="color: #28a745; margin: 0;">● กำลังส่งพิกัด...</h3>
+                    <p id="truckDisplay"></p>
                 </div>
                 <button onclick="location.reload()" class="btn-danger" style="margin-top: 20px;">หยุดการแชร์ตำแหน่ง</button>
             </div>
@@ -52,7 +49,6 @@
         const db = getDatabase(app);
         const truckRef = ref(db, 'truckLocation');
 
-        // --- เพิ่มระบบจดจำรหัสผ่าน ---
         window.onload = () => {
             if (localStorage.getItem('isDriverLoggedIn') === 'true') {
                 document.getElementById('login-section').classList.add('hidden');
@@ -62,28 +58,24 @@
 
         window.loginDriver = () => {
             if(document.getElementById('password').value === "987654321") {
-                localStorage.setItem('isDriverLoggedIn', 'true'); // บันทึกสถานะ
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('active-section').classList.remove('hidden');
+                localStorage.setItem('isDriverLoggedIn', 'true');
+                location.reload();
             } else { alert("รหัสผ่านไม่ถูกต้อง"); }
         };
 
         window.logoutDriver = () => {
-            localStorage.removeItem('isDriverLoggedIn'); // ลบการจำรหัสผ่าน
+            localStorage.removeItem('isDriverLoggedIn');
             location.reload();
         };
-        // ------------------------------
 
         window.startSharing = () => {
             const tNo = document.getElementById('truckNo').value;
             const rName = document.getElementById('routeName').value;
             if(!tNo || !rName) { alert("ระบุข้อมูลให้ครบ"); return; }
-
             if (navigator.geolocation) {
                 document.getElementById('setup-section').classList.add('hidden');
                 document.getElementById('sharing-status').classList.remove('hidden');
-                document.getElementById('truckDisplay').innerText = `รถหมายเลข: ${tNo} (${rName})`;
-
+                document.getElementById('truckDisplay').innerText = `รถ: ${tNo} (${rName})`;
                 onDisconnect(truckRef).remove();
                 navigator.geolocation.watchPosition((pos) => {
                     set(truckRef, { lat: pos.coords.latitude, lng: pos.coords.longitude, truckNo: tNo, routeName: rName, timestamp: Date.now() });
