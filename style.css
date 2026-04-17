@@ -1,113 +1,78 @@
-/* นำเข้าฟอนต์ Chakra Petch จาก Google Fonts */
+/* นำเข้าฟอนต์ Chakra Petch */
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;700&display=swap');
 
 body, html { 
     margin: 0; padding: 0; height: 100%; 
     font-family: 'Chakra Petch', sans-serif; 
-    background-color: #f4f7f6;
+    background-color: #f0f2f5;
 }
 
 #map { height: 100vh; width: 100vw; z-index: 1; }
 
-/* กล่องข้อมูลระยะห่าง (หน้าผู้ใช้) */
+/* หน้า Admin และ Dashboard */
+.admin-container {
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+.status-pending { background: #fff3cd; color: #856404; }
+.status-process { background: #cce5ff; color: #004085; }
+.status-done { background: #d4edda; color: #155724; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #f8f9fa; }
+
+/* องค์ประกอบหน้าจอ User/Driver เดิม */
 .info-box {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    background: white;
-    padding: 15px 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    text-align: center;
-    min-width: 280px;
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; background: white; padding: 15px 25px; border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; min-width: 280px;
 }
 
-/* ไอคอนตำแหน่งของผู้ใช้ (สีแดง) */
-.user-icon {
-    background-color: #ff0000;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
-}
-.pulse-red { animation: pulse-red-animation 1.5s infinite; }
-@keyframes pulse-red-animation {
-    0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
-    70% { box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+.btn-report {
+    position: absolute; bottom: 30px; right: 20px; z-index: 1000;
+    background-color: #ff9800; color: white; border: none; padding: 15px 20px;
+    border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
-/* ไอคอนรถขยะ (สีเขียว) และป้ายชื่อ */
-.truck-icon-container { display: flex; flex-direction: column; align-items: center; }
-.truck-icon {
-    background-color: #28a745;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 0 10px #28a745;
-    width: 24px; height: 24px;
+.modal {
+    display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center;
 }
-.truck-moving { animation: pulse-green 1.5s infinite; }
-@keyframes pulse-green {
-    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
-    70% { box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-}
+.modal-content { background: white; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; text-align: center; }
 
-/* ป้ายข้อความบนหมุดรถ */
-.truck-label {
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    white-space: nowrap;
-    margin-top: 5px;
-    font-weight: bold;
-    pointer-events: none;
-}
-
-/* แผงควบคุม (หน้าคนขับ) */
 .driver-panel {
-    background: white;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    text-align: center;
-    width: 85%;
-    max-width: 380px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2000;
+    background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    text-align: center; width: 85%; max-width: 380px; margin: 50px auto;
 }
 
-input {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-sizing: border-box;
-    font-family: 'Chakra Petch', sans-serif;
-    font-size: 16px;
-}
-
-button {
-    width: 100%;
-    padding: 15px;
-    font-size: 18px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background-color: #007bff;
-    color: white;
-    font-weight: bold;
-    font-family: 'Chakra Petch', sans-serif;
-    margin-top: 10px;
-}
-button.stop { background-color: #dc3545; }
+input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Chakra Petch'; }
+button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: 'Chakra Petch'; margin-top: 5px; }
+.btn-primary { background: #007bff; color: white; }
+.btn-danger { background: #dc3545; color: white; }
+.btn-success { background: #28a745; color: white; }
 .hidden { display: none; }
-.success { color: #28a745; font-weight: bold; }
-.danger { color: #dc3545; font-weight: bold; }
+
+/* ไอคอนรถ/ผู้ใช้ */
+.truck-icon-container { display: flex; flex-direction: column; align-items: center; }
+.truck-icon { background-color: #28a745; border-radius: 50%; border: 2px solid white; width: 24px; height: 24px; }
+.truck-moving { animation: pulse-green 1.5s infinite; }
+@keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(40,167,69,0.7); } 70% { box-shadow: 0 0 0 15px rgba(40,167,69,0); } 100% { box-shadow: 0 0 0 0 rgba(40,167,69,0); } }
+.truck-label { background: rgba(0,0,0,0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-top: 5px; font-weight: bold; }
+.user-icon { background-color: #ff0000; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(255,0,0,0.5); }
