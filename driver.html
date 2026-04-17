@@ -9,14 +9,28 @@
 <body>
     <div class="driver-panel">
         <h2>ระบบคนขับ</h2>
-        <div class="status-box">
-            <div id="status" class="danger">สถานะ: ปิดการทำงาน</div>
-            <div id="coords" style="margin-top:10px; font-size:12px; color:#888;">พิกัดล่าสุด: -</div>
+        
+        <div id="login-section">
+            <input type="password" id="password" placeholder="ใส่รหัสผ่านเพื่อเข้าใช้งาน">
+            <button id="loginBtn">ยืนยันรหัสผ่าน</button>
         </div>
-        <button id="toggleBtn">เริ่มส่งตำแหน่ง</button>
-        <p style="font-size: 12px; color: #d32f2f; margin-top: 15px;">
-            * ห้ามพับหน้าจอหรือสลับแอป ระบบจะช่วยเปิดจอค้างไว้ให้โดยอัตโนมัติ
-        </p>
+
+        <div id="setup-section" class="hidden">
+            <p>ระบุข้อมูลก่อนเริ่มงาน</p>
+            <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ก-123)">
+            <input type="text" id="routeName" placeholder="ชื่อสาย/เส้นทาง (เช่น สายตลาดสด)">
+            <button id="startBtn">เริ่มส่งตำแหน่งพิกัด</button>
+        </div>
+
+        <div id="active-section" class="hidden">
+            <div class="status-box" style="background:#e9ecef; padding:15px; border-radius:8px;">
+                <div id="status" class="success">สถานะ: กำลังส่งพิกัด...</div>
+                <div id="displayInfo" style="margin-top:5px; font-weight:bold;"></div>
+                <div id="coords" style="margin-top:10px; font-size:12px; color:#888;"></div>
+            </div>
+            <button id="stopBtn" class="stop">หยุดการทำงาน</button>
+            <p style="font-size: 11px; color: #d32f2f; margin-top:15px;">* ห้ามปิดหน้าจอนี้ขณะทำงาน</p>
+        </div>
     </div>
 
     <script type="module">
@@ -38,82 +52,60 @@
         const db = getDatabase(app);
         const truckRef = ref(db, 'truckLocation');
 
-        let watchId = null;
         let isTracking = false;
-        let lastSendTime = 0;
-        const SEND_INTERVAL = 5000;
+        let watchId = null;
         let wakeLock = null;
+        let lastSendTime = 0;
 
-        async function requestWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch (err) {
-                console.error(`Wake Lock Error: ${err.message}`);
-            }
-        }
-
-        function releaseWakeLock() {
-            if (wakeLock !== null) {
-                wakeLock.release().then(() => { wakeLock = null; });
-            }
-        }
-
-        function toggleTracking() {
-            const btn = document.getElementById('toggleBtn');
-            const statusText = document.getElementById('status');
-
-            if (!isTracking) {
-                if (navigator.geolocation) {
-                    onDisconnect(truckRef).remove();
-                    watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
-                        enableHighAccuracy: true, maximumAge: 10000, timeout: 10000
-                    });
-                    isTracking = true;
-                    btn.innerText = "หยุดส่งตำแหน่ง";
-                    btn.classList.add('stop');
-                    statusText.innerText = "สถานะ: กำลังส่งตำแหน่ง...";
-                    statusText.className = "success";
-                    requestWakeLock();
-                } else {
-                    alert("อุปกรณ์ไม่รองรับ GPS");
-                }
+        // 1. ตรวจสอบรหัสผ่าน
+        document.getElementById('loginBtn').onclick = () => {
+            if(document.getElementById('password').value === "987654321") {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('setup-section').classList.remove('hidden');
             } else {
-                navigator.geolocation.clearWatch(watchId);
-                isTracking = false;
-                btn.innerText = "เริ่มส่งตำแหน่ง";
-                btn.classList.remove('stop');
-                statusText.innerText = "สถานะ: ปิดการทำงาน";
-                statusText.className = "danger";
-                remove(truckRef);
-                onDisconnect(truckRef).cancel();
-                releaseWakeLock();
+                alert("รหัสผ่านไม่ถูกต้อง!");
             }
-        }
+        };
 
-        document.getElementById('toggleBtn').addEventListener('click', toggleTracking);
+        // 2. เริ่มส่งตำแหน่ง
+        document.getElementById('startBtn').onclick = () => {
+            const truckNo = document.getElementById('truckNo').value;
+            const routeName = document.getElementById('routeName').value;
 
-        document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                await requestWakeLock();
+            if(!truckNo || !routeName) {
+                alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+                return;
             }
-        });
 
-        function updatePosition(position) {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            const now = Date.now();
-            document.getElementById('coords').innerText = `พิกัด: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-            if (now - lastSendTime >= SEND_INTERVAL) {
-                set(truckRef, { lat, lng, timestamp: now }).then(() => { lastSendTime = now; });
+            if (navigator.geolocation) {
+                document.getElementById('setup-section').classList.add('hidden');
+                document.getElementById('active-section').classList.remove('hidden');
+                document.getElementById('displayInfo').innerText = `รถ: ${truckNo} | ${routeName}`;
+                
+                onDisconnect(truckRef).remove();
+                watchId = navigator.geolocation.watchPosition((pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    const now = Date.now();
+                    document.getElementById('coords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    
+                    if (now - lastSendTime >= 5000) {
+                        set(truckRef, { lat, lng, truckNo, routeName, timestamp: now });
+                        lastSendTime = now;
+                    }
+                }, null, { enableHighAccuracy: true });
+
+                isTracking = true;
+                if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(lock => wakeLock = lock);
             }
-        }
+        };
 
-        function handleError(error) {
-            document.getElementById('status').innerText = "สถานะ: GPS ขัดข้อง";
-            document.getElementById('status').className = "danger";
-        }
+        // 3. หยุดการทำงาน
+        document.getElementById('stopBtn').onclick = () => {
+            navigator.geolocation.clearWatch(watchId);
+            remove(truckRef);
+            location.reload(); // รีเฟรชหน้าจอเพื่อล้างค่าทั้งหมด
+        };
     </script>
 </body>
 </html>
