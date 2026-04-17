@@ -110,14 +110,25 @@ button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: p
     text-align: left; 
     vertical-align: top;
     font-size: 16px;
-    white-space: normal; /* ให้ข้อความตัดบรรทัดได้ตอนพิมพ์ */
+    white-space: normal;
 }
 .print-list-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
 
+/* จัดตำแหน่งและขนาด QR Code ในตาราง A4 */
+.row-qr { 
+    display: flex; 
+    justify-content: center; 
+    margin-top: 10px; 
+}
+.row-qr img, .row-qr canvas { 
+    max-width: 70px; 
+    max-height: 70px; 
+}
+
 /* การตั้งค่าหน้ากระดาษพิมพ์ */
 @page { 
-    size: A4 portrait; /* กำหนดขนาด A4 แนวตั้ง */
-    margin: 15mm; /* ขอบกระดาษ */
+    size: A4 portrait; 
+    margin: 15mm; 
 }
 
 @media print {
