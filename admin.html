@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการงานแจ้งเหตุ (Admin)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="admin-container">
+        <div id="login-section" class="card" style="max-width: 400px; margin: 100px auto;">
+            <h2 style="text-align: center;">ผู้ดูแลระบบ (Admin)</h2>
+            <input type="password" id="password" placeholder="ใส่รหัสผ่านแอดมิน">
+            <button onclick="loginAdmin()" class="btn-primary">เข้าสู่ระบบ</button>
+        </div>
+
+        <div id="admin-dashboard" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>รายการแจ้งเหตุจากประชาชน</h2>
+                    <button onclick="location.reload()" style="width: auto; padding: 5px 15px;">รีเฟรชข้อมูล</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ประเภท</th>
+                            <th>เวลาที่แจ้ง</th>
+                            <th>สถานะ</th>
+                            <th>จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTable">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+        import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
+            authDomain: "suchartstudio-9a78d.firebaseapp.com",
+            databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "suchartstudio-9a78d",
+            storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+            messagingSenderId: "953369646185",
+            appId: "1:953369646185:web:ad68f20b3ef395716ebef8",
+            measurementId: "G-7L7V9JEFT7"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.loginAdmin = () => {
+            if(document.getElementById('password').value === "987654321") {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                loadAllReports();
+            } else { alert("รหัสผ่านไม่ถูกต้อง"); }
+        };
+
+        function loadAllReports() {
+            onValue(ref(db, 'reports'), (snapshot) => {
+                const data = snapshot.val();
+                const table = document.getElementById('reportTable');
+                table.innerHTML = "";
+                if (!data) { table.innerHTML = "<tr><td colspan='4' style='text-align:center'>ไม่มีข้อมูลการแจ้งเหตุ</td></tr>"; return; }
+
+                Object.keys(data).forEach(id => {
+                    const r = data[id];
+                    const time = new Date(r.timestamp).toLocaleString('th-TH');
+                    let statusClass = r.status === 'pending' ? 'status-pending' : (r.status === 'process' ? 'status-process' : 'status-done');
+                    let statusText = r.status === 'pending' ? 'รอดำเนินการ' : (r.status === 'process' ? 'กำลังดำเนินการ' : 'เสร็จสิ้น');
+
+                    const row = `
+                        <tr>
+                            <td><b>${r.type}</b></td>
+                            <td style="font-size: 13px;">${time}</td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td>
+                                <select onchange="updateStatus('${id}', this.value)" style="width: 120px; font-size: 12px; margin: 0;">
+                                    <option value="pending" ${r.status==='pending'?'selected':''}>รอดำเนินการ</option>
+                                    <option value="process" ${r.status==='process'?'selected':''}>กำลังดำเนินการ</option>
+                                    <option value="done" ${r.status==='done'?'selected':''}>เสร็จสิ้น</option>
+                                </select>
+                                <button onclick="viewMap(${r.lat}, ${r.lng})" class="btn-primary" style="width: auto; padding: 2px 8px; font-size: 11px;">แผนที่</button>
+                                <button onclick="deleteReport('${id}')" class="btn-danger" style="width: auto; padding: 2px 8px; font-size: 11px;">ลบ</button>
+                            </td>
+                        </tr>
+                    `;
+                    table.innerHTML += row;
+                });
+            });
+        }
+
+        window.updateStatus = (id, newStatus) => {
+            update(ref(db, `reports/${id}`), { status: newStatus });
+        };
+
+        window.viewMap = (lat, lng) => {
+            window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+        };
+
+        window.deleteReport = (id) => {
+            if(confirm("ต้องการลบข้อมูลนี้หรือไม่?")) {
+                remove(ref(db, `reports/${id}`));
+            }
+        };
+    </script>
+</body>
+</html>
