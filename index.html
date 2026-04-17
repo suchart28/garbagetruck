@@ -3,26 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ติดตามรถเก็บขยะ</title>
+    <title>ติดตามรถเก็บขยะ (Public)</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
     <div class="info-box">
-        <h3 style="margin:0; font-size: 18px;">รถเก็บขยะเทศบาล</h3>
-        <div id="distance-info">กำลังหาพิกัดของคุณ...</div>
+        <h3 style="margin:0;">รถเก็บขยะเทศบาล</h3>
+        <div id="distance-info">กำลังหาพิกัด...</div>
     </div>
+
     <div id="map"></div>
+
+    <button class="btn-report" onclick="openModal()">⚠️ แจ้งปัญหาขยะ</button>
+
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <h3>แจ้งปัญหาขยะ</h3>
+            <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary" style="margin-bottom: 10px;">ขยะชิ้นใหญ่ (เฟอร์นิเจอร์/ที่นอน)</button>
+            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800;">ขยะล้นถัง / จุดพักขยะเต็ม</button>
+            <button onclick="closeModal()" class="btn-danger" style="margin-top: 15px;">ยกเลิก</button>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+        import { getDatabase, ref, onValue, push, set } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
-            databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "suchartstudio-9a78d",
             storageBucket: "suchartstudio-9a78d.firebasestorage.app",
             messagingSenderId: "953369646185",
@@ -34,52 +46,43 @@
         const db = getDatabase(app);
 
         const map = L.map('map').setView([16.4322, 102.8236], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         let userLatLng = null, truckMarker = null, userMarker = null;
-
         const userIcon = L.divIcon({ className: 'user-icon pulse-red', iconSize: [16, 16], iconAnchor: [8, 8], html: '' });
 
-        map.locate({setView: true, maxZoom: 16});
+        map.locate({setView: true, maxZoom: 16, watch: true});
         map.on('locationfound', (e) => {
             userLatLng = e.latlng;
             if(!userMarker) userMarker = L.marker(userLatLng, { icon: userIcon }).addTo(map);
             else userMarker.setLatLng(userLatLng);
         });
 
+        // โหลดพิกัดรถ
         onValue(ref(db, 'truckLocation'), (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const truckPos = [data.lat, data.lng];
-                const labelText = `รถ: ${data.truckNo} (${data.routeName})`;
-
-                if (!truckMarker) {
-                    // สร้างไอคอนที่มีป้ายข้อความในตัว
-                    const truckHtml = `<div class="truck-icon-container">
-                                        <div class="truck-icon truck-moving"></div>
-                                        <div class="truck-label">${labelText}</div>
-                                       </div>`;
-                    const customIcon = L.divIcon({ className: '', html: truckHtml, iconSize: [100, 40], iconAnchor: [50, 12] });
-                    truckMarker = L.marker(truckPos, { icon: customIcon }).addTo(map);
-                } else {
-                    // อัปเดตพิกัดและข้อความ
-                    const truckHtml = `<div class="truck-icon-container">
-                                        <div class="truck-icon truck-moving"></div>
-                                        <div class="truck-label">${labelText}</div>
-                                       </div>`;
-                    truckMarker.setIcon(L.divIcon({ className: '', html: truckHtml, iconSize: [100, 40], iconAnchor: [50, 12] }));
-                    truckMarker.setLatLng(truckPos);
-                }
-
+            const d = snapshot.val();
+            if (d) {
+                const pos = [d.lat, d.lng];
+                const html = `<div class="truck-icon-container"><div class="truck-icon truck-moving"></div><div class="truck-label">${d.truckNo}</div></div>`;
+                if (!truckMarker) truckMarker = L.marker(pos, { icon: L.divIcon({ className:'', html, iconSize:[100,40], iconAnchor:[50,12]}) }).addTo(map);
+                else { truckMarker.setLatLng(pos); truckMarker.setIcon(L.divIcon({ className:'', html, iconSize:[100,40], iconAnchor:[50,12]})); }
+                
                 if(userLatLng) {
-                    const dist = map.distance(userLatLng, truckPos);
-                    document.getElementById('distance-info').innerHTML = `ระยะห่าง: <strong>${dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' ม.'}</strong>`;
+                    const dist = map.distance(userLatLng, pos);
+                    document.getElementById('distance-info').innerHTML = `รถอยู่ห่างจากคุณ: <b>${dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' ม.'}</b>`;
                 }
-            } else {
-                document.getElementById('distance-info').innerHTML = "<span class='danger'>ไม่มีรถปฏิบัติงาน</span>";
-                if(truckMarker) { map.removeLayer(truckMarker); truckMarker = null; }
-            }
+            } else { document.getElementById('distance-info').innerText = "ไม่มีรถปฏิบัติงาน"; if(truckMarker){map.removeLayer(truckMarker); truckMarker=null;} }
         });
+
+        window.sendReport = (type) => {
+            if(!userLatLng) { alert("กรุณารอระบบระบุพิกัดก่อนแจ้งเหตุ"); return; }
+            const newRef = push(ref(db, 'reports'));
+            set(newRef, { type, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: Date.now(), status: 'pending' })
+            .then(() => { alert("แจ้งเหตุสำเร็จ แอดมินจะตรวจสอบสถานะให้ครับ"); closeModal(); });
+        };
+
+        window.openModal = () => document.getElementById('reportModal').style.display = 'flex';
+        window.closeModal = () => document.getElementById('reportModal').style.display = 'none';
     </script>
 </body>
 </html>
