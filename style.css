@@ -22,6 +22,7 @@ body, html {
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     margin-bottom: 20px;
+    overflow-x: auto; /* เผื่อตารางล้นจอบนมือถือ */
 }
 
 .status-badge {
@@ -35,7 +36,7 @@ body, html {
 .status-done { background: #d4edda; color: #155724; }
 
 table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
 th { background: #f8f9fa; }
 
 /* องค์ประกอบหน้าจอ User/Driver เดิม */
@@ -45,10 +46,23 @@ th { background: #f8f9fa; }
     box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; min-width: 280px;
 }
 
+/* อัปเดต: ปรับตำแหน่งปุ่มแจ้งเหตุให้อยู่กึ่งกลางหน้าจอด้านล่าง */
+.report-btn-container {
+    position: absolute; 
+    bottom: 30px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 100%;
+    text-align: center;
+    pointer-events: none; /* เพื่อไม่ให้ตัวกล่องบังการเลื่อนแผนที่ */
+}
+
 .btn-report {
-    position: absolute; bottom: 30px; right: 20px; z-index: 1000;
-    background-color: #ff9800; color: white; border: none; padding: 15px 20px;
+    background-color: #ff9800; color: white; border: none; padding: 15px 25px;
     border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    font-size: 16px;
+    pointer-events: auto; /* ให้ตัวปุ่มกดได้ปกติ */
 }
 
 .modal {
