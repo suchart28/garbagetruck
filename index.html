@@ -62,12 +62,10 @@
             if (d) {
                 const pos = [d.lat, d.lng];
                 const labelText = `${d.truckNo} (${d.routeName})`;
-                // สลับป้ายชื่อมาไว้ก่อน (บน) แล้วตามด้วยไอคอน (ล่าง)
                 const html = `<div class="truck-icon-container">
                                 <div class="truck-label">${labelText}</div>
                                 <div class="truck-icon truck-moving"></div>
                               </div>`;
-                
                 const iconOptions = { className: '', html: html, iconSize: [100, 50], iconAnchor: [50, 38] };
 
                 if (!truckMarker) truckMarker = L.marker(pos, { icon: L.divIcon(iconOptions) }).addTo(map);
@@ -85,7 +83,7 @@
 
         window.sendReport = (type) => {
             const phone = document.getElementById('reporterPhone').value;
-            if(!phone || !userLatLng) { alert("ข้อมูลไม่ครบ"); return; }
+            if(!phone || !userLatLng) { alert("กรุณาระบุเบอร์โทรและรอระบุตำแหน่ง"); return; }
             const newRef = push(ref(db, 'reports'));
             set(newRef, { type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: Date.now(), status: 'pending' })
             .then(() => { alert("แจ้งเหตุสำเร็จ"); closeModal(); });
