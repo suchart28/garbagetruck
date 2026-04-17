@@ -3,29 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบคนขับรถเก็บขยะ</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <title>ระบบคนขับรถเก็บขยะ (โหมดประหยัดพลังงาน)</title>
+    <style>
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            font-family: 'Kanit', sans-serif;
+            background-color: #f4f7f6;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .driver-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 80%;
+            max-width: 350px;
+        }
+        h2 { margin-top: 0; color: #333; }
+        p { font-size: 16px; color: #666; }
+        .status-box {
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        button.stop { background-color: #dc3545; }
+        .success { color: #28a745; font-weight: bold; }
+        .danger { color: #dc3545; font-weight: bold; }
+    </style>
 </head>
 <body>
-    <div id="map"></div>
     <div class="driver-panel">
-        <h3 style="margin-top:0;">สำหรับคนขับรถ</h3>
-        <p id="status">สถานะ: รอการเชื่อมต่อ GPS...</p>
-        <button id="toggleBtn">เริ่มแชร์ตำแหน่ง</button>
+        <h2>ระบบคนขับ</h2>
+        <div class="status-box">
+            <div id="status" class="danger">สถานะ: ปิดการทำงาน</div>
+            <div id="coords" style="margin-top:10px; font-size:12px; color:#888;">พิกัดล่าสุด: -</div>
+        </div>
+        <button id="toggleBtn">เริ่มส่งตำแหน่ง</button>
     </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-        import { getDatabase, ref, set, remove } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+        import { getDatabase, ref, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-        // ตั้งค่า Firebase ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
-            databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "suchartstudio-9a78d",
             storageBucket: "suchartstudio-9a78d.firebasestorage.app",
             messagingSenderId: "953369646185",
@@ -33,75 +71,81 @@
             measurementId: "G-7L7V9JEFT7"
         };
 
-        // เริ่มต้นใช้งาน Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-
-        // ตั้งค่าแผนที่ OpenStreetMap
-        const map = L.map('map').setView([16.4322, 102.8236], 13); // พิกัดเริ่มต้น
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        const truckRef = ref(db, 'truckLocation');
 
         let watchId = null;
         let isTracking = false;
-        let driverMarker = null;
+        
+        // ตัวแปรสำหรับหน่วงเวลาส่งข้อมูล (Throttling)
+        let lastSendTime = 0;
+        const SEND_INTERVAL = 5000; // ส่งข้อมูลขึ้นเซิร์ฟเวอร์ทุกๆ 5 วินาที (5000 มิลลิวินาที)
 
-        const truckIcon = L.divIcon({ className: 'truck-icon truck-moving', iconSize: [24, 24] });
-
-        // ฟังก์ชันเปิด/ปิดการแชร์ตำแหน่ง
         function toggleTracking() {
             const btn = document.getElementById('toggleBtn');
             const statusText = document.getElementById('status');
+            const coordsText = document.getElementById('coords');
 
             if (!isTracking) {
                 if (navigator.geolocation) {
+                    // เปิดระบบตัดการเชื่อมต่ออัตโนมัติ: ถ้าเน็ตหลุด ให้ลบพิกัดรถออกจากแผนที่ผู้ใช้ทันที
+                    onDisconnect(truckRef).remove();
+
                     watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
-                        enableHighAccuracy: true, maximumAge: 0, timeout: 5000
+                        enableHighAccuracy: true, // ยังคงต้องการความแม่นยำสูงเพื่อให้รู้ถนนที่วิ่ง
+                        maximumAge: 10000, // ยอมรับพิกัดที่เก่าได้นิดหน่อย (10 วิ) เพื่อลดภาระ CPU
+                        timeout: 10000
                     });
+                    
                     isTracking = true;
-                    btn.innerText = "หยุดแชร์ตำแหน่ง";
+                    btn.innerText = "หยุดส่งตำแหน่ง";
                     btn.classList.add('stop');
-                    statusText.innerText = "สถานะ: กำลังแชร์ตำแหน่ง...";
-                    statusText.style.color = "green";
+                    statusText.innerText = "สถานะ: กำลังส่งตำแหน่ง...";
+                    statusText.className = "success";
                 } else {
                     alert("เบราว์เซอร์ของคุณไม่รองรับ GPS");
                 }
             } else {
                 navigator.geolocation.clearWatch(watchId);
                 isTracking = false;
-                btn.innerText = "เริ่มแชร์ตำแหน่ง";
+                btn.innerText = "เริ่มส่งตำแหน่ง";
                 btn.classList.remove('stop');
-                statusText.innerText = "สถานะ: หยุดการทำงาน";
-                statusText.style.color = "red";
+                statusText.innerText = "สถานะ: ปิดการทำงาน";
+                statusText.className = "danger";
+                coordsText.innerText = "พิกัดล่าสุด: -";
                 
-                // ลบพิกัดออกจากระบบเมื่อเลิกงาน
-                remove(ref(db, 'truckLocation'));
+                // ลบพิกัดออกและยกเลิก onDisconnect
+                remove(truckRef);
+                onDisconnect(truckRef).cancel();
             }
         }
 
-        // เชื่อมต่อปุ่มกับฟังก์ชัน
         document.getElementById('toggleBtn').addEventListener('click', toggleTracking);
 
         function updatePosition(position) {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
+            const now = Date.now();
             
-            // อัปเดตพิกัดลง Firebase Database
-            set(ref(db, 'truckLocation'), { lat: lat, lng: lng, timestamp: Date.now() });
+            // อัปเดตหน้าจอมือถือคนขับ (ทำงานออฟไลน์ได้ ไม่กินเน็ต)
+            document.getElementById('coords').innerText = `พิกัด: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
-            // แสดงจุดบนแผนที่ของคนขับ
-            if (!driverMarker) {
-                driverMarker = L.marker([lat, lng], {icon: truckIcon}).addTo(map);
-                map.setView([lat, lng], 16);
-            } else {
-                driverMarker.setLatLng([lat, lng]);
+            // เช็คว่าผ่านไป 5 วินาทีหรือยัง ถึงจะยอมส่งเน็ต 1 ครั้ง
+            if (now - lastSendTime >= SEND_INTERVAL) {
+                set(truckRef, { lat: lat, lng: lng, timestamp: now })
+                    .then(() => {
+                        console.log("ส่งพิกัดสำเร็จ");
+                        lastSendTime = now;
+                    })
+                    .catch((error) => console.error("เน็ตหลุด ไม่สามารถส่งได้", error));
             }
         }
 
         function handleError(error) {
             console.error("GPS Error: ", error);
-            document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการหาพิกัด";
+            document.getElementById('status').innerText = "สถานะ: หาสัญญาณ GPS ไม่เจอ";
+            document.getElementById('status').className = "danger";
         }
     </script>
 </body>
