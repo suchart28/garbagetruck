@@ -71,7 +71,7 @@
         window.startSharing = () => {
             const tNo = document.getElementById('truckNo').value;
             const rName = document.getElementById('routeName').value;
-            if(!tNo || !rName) { alert("ระบุข้อมูลให้ครบ"); return; }
+            if(!tNo || !rName) { alert("กรอกข้อมูลให้ครบ"); return; }
             if (navigator.geolocation) {
                 document.getElementById('setup-section').classList.add('hidden');
                 document.getElementById('sharing-status').classList.remove('hidden');
