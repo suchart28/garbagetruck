@@ -20,8 +20,9 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                     <h2>รายการแจ้งเหตุจากประชาชน</h2>
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="printSummaryTable()" class="btn-success" style="width: auto; padding: 8px 15px;">🖨️ พิมพ์ตารางงาน (A4)</button>
-                        <button onclick="location.reload()" style="width: auto; padding: 8px 15px;">รีเฟรชข้อมูล</button>
+                        <button onclick="printSummaryTable()" class="btn-success" style="width: auto; padding: 8px 15px;">🖨️ พิมพ์ตาราง (A4)</button>
+                        <button onclick="location.reload()" style="width: auto; padding: 8px 15px;">รีเฟรช</button>
+                        <button onclick="logoutAdmin()" class="btn-danger" style="width: auto; padding: 8px 15px;">ออกจากระบบ</button>
                     </div>
                 </div>
                 <table>
@@ -60,16 +61,31 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        
         let allReportsData = null; 
+
+        // --- เพิ่มระบบจดจำรหัสผ่าน ---
+        window.onload = () => {
+            if (localStorage.getItem('isAdminLoggedIn') === 'true') {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                loadAllReports();
+            }
+        };
 
         window.loginAdmin = () => {
             if(document.getElementById('password').value === "987654321") {
+                localStorage.setItem('isAdminLoggedIn', 'true'); // บันทึกสถานะการล็อกอิน
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
                 loadAllReports();
             } else { alert("รหัสผ่านไม่ถูกต้อง"); }
         };
+
+        window.logoutAdmin = () => {
+            localStorage.removeItem('isAdminLoggedIn'); // ลบการจำรหัสผ่าน
+            location.reload();
+        };
+        // ------------------------------
 
         function loadAllReports() {
             onValue(ref(db, 'reports'), (snapshot) => {
@@ -115,10 +131,8 @@
         window.viewMap = (lat, lng) => { window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank'); };
         window.deleteReport = (id) => { if(confirm("ต้องการลบข้อมูลนี้ออกจากระบบหรือไม่?")) remove(ref(db, `reports/${id}`)); };
 
-        // 1. ฟังก์ชันพิมพ์ใบงานเดี่ยว
         window.printTicket = (type, phone, time, lat, lng) => {
             const printSec = document.getElementById('print-section');
-            // ใช้ URL แบบนำทาง (Directions)
             const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             
             printSec.innerHTML = `
@@ -136,24 +150,14 @@
                 </div>
             `;
             
-            new QRCode(document.getElementById("qrcode"), {
-                text: mapUrl, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff"
-            });
-
+            new QRCode(document.getElementById("qrcode"), { text: mapUrl, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff" });
             triggerPrint(printSec);
         };
 
-        // 2. ฟังก์ชันพิมพ์ตารางงาน A4 พร้อม QR Code ในแต่ละข้อ
         window.printSummaryTable = () => {
             if (!allReportsData) { alert("ไม่มีข้อมูลในระบบ"); return; }
-            
             let pendingTasks = [];
-            Object.keys(allReportsData).forEach(id => {
-                if(allReportsData[id].status !== 'done') {
-                    pendingTasks.push(allReportsData[id]);
-                }
-            });
-
+            Object.keys(allReportsData).forEach(id => { if(allReportsData[id].status !== 'done') pendingTasks.push(allReportsData[id]); });
             if (pendingTasks.length === 0) { alert("ไม่มีงานที่ค้างอยู่"); return; }
 
             const tasksToPrint = pendingTasks.slice(0, 5);
@@ -164,10 +168,7 @@
                 tableRows += `
                     <tr>
                         <td style="text-align:center;">${index + 1}</td>
-                        <td>
-                            <b>${r.type}</b><br>
-                            <span style="font-size:14px; color:#555;">เวลา: ${time}</span>
-                        </td>
+                        <td><b>${r.type}</b><br><span style="font-size:14px; color:#555;">เวลา: ${time}</span></td>
                         <td>${r.phone || '-'}</td>
                         <td style="font-size:14px; text-align:center;">
                             ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}
@@ -187,17 +188,9 @@
                     <p><b>ประจำวันที่:</b> ${currentDate}</p>
                     <table class="print-list-table">
                         <thead>
-                            <tr>
-                                <th style="width:50px;">ลำดับ</th>
-                                <th>ประเภทปัญหา / เวลาแจ้ง</th>
-                                <th>เบอร์ติดต่อ</th>
-                                <th style="width:120px;">สแกนเพื่อนำทาง</th>
-                                <th>ผลการปฏิบัติงาน<br>(ลายมือชื่อ)</th>
-                            </tr>
+                            <tr><th style="width:50px;">ลำดับ</th><th>ประเภทปัญหา / เวลาแจ้ง</th><th>เบอร์ติดต่อ</th><th style="width:120px;">สแกนเพื่อนำทาง</th><th>ผลการปฏิบัติงาน<br>(ลายมือชื่อ)</th></tr>
                         </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
+                        <tbody>${tableRows}</tbody>
                     </table>
                     <div style="margin-top: 30px; display: flex; justify-content: space-between;">
                         <div>ลงชื่อ .............................................................. พนักงานขับรถ</div>
@@ -206,18 +199,9 @@
                 </div>
             `;
 
-            // วนลูปสร้าง QR Code ใส่ลงไปในช่องแต่ละแถว
             tasksToPrint.forEach((r, index) => {
-                // ลิงก์สำหรับการนำทาง
                 const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`;
-                new QRCode(document.getElementById(`qr-${index}`), {
-                    text: mapUrl,
-                    width: 70, // ขนาดเล็กพอดีตาราง
-                    height: 70,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.L // ระดับ L เพื่อให้ลายไม่แน่นเกินไป สแกนง่าย
-                });
+                new QRCode(document.getElementById(`qr-${index}`), { text: mapUrl, width: 70, height: 70, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
             });
 
             triggerPrint(printSec);
@@ -225,10 +209,7 @@
 
         function triggerPrint(printSec) {
             printSec.classList.remove('hidden');
-            setTimeout(() => {
-                window.print();
-                printSec.classList.add('hidden');
-            }, 500); // หน่วงเวลาให้ QR Code ประมวลผลเสร็จ
+            setTimeout(() => { window.print(); printSec.classList.add('hidden'); }, 500); 
         }
     </script>
 </body>
