@@ -3,33 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบคนขับรถเก็บขยะ</title>
+    <title>ระบบคนขับรถเก็บขยะ (GPS)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="driver-panel">
-        <h2>ระบบคนขับ</h2>
-        
+        <h2>ระบบคนขับ (GPS)</h2>
         <div id="login-section">
-            <input type="password" id="password" placeholder="ใส่รหัสผ่านเพื่อเข้าใช้งาน">
-            <button id="loginBtn">ยืนยันรหัสผ่าน</button>
-        </div>
-
-        <div id="setup-section" class="hidden">
-            <p>ระบุข้อมูลก่อนเริ่มงาน</p>
-            <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ก-123)">
-            <input type="text" id="routeName" placeholder="ชื่อสาย/เส้นทาง (เช่น สายตลาดสด)">
-            <button id="startBtn">เริ่มส่งตำแหน่งพิกัด</button>
+            <input type="password" id="password" placeholder="ใส่รหัสผ่านคนขับ">
+            <button onclick="loginDriver()" class="btn-primary">ยืนยันรหัสผ่าน</button>
         </div>
 
         <div id="active-section" class="hidden">
-            <div class="status-box" style="background:#e9ecef; padding:15px; border-radius:8px;">
-                <div id="status" class="success">สถานะ: กำลังส่งพิกัด...</div>
-                <div id="displayInfo" style="margin-top:5px; font-weight:bold;"></div>
-                <div id="coords" style="margin-top:10px; font-size:12px; color:#888;"></div>
+            <div id="setup-section">
+                <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ก-123)">
+                <input type="text" id="routeName" placeholder="สาย/เส้นทาง">
+                <button onclick="startSharing()" class="btn-success">เริ่มแชร์ตำแหน่ง</button>
             </div>
-            <button id="stopBtn" class="stop">หยุดการทำงาน</button>
-            <p style="font-size: 11px; color: #d32f2f; margin-top:15px;">* ห้ามปิดหน้าจอนี้ขณะทำงาน</p>
+            
+            <div id="sharing-status" class="hidden">
+                <div style="background: #e9ecef; padding: 20px; border-radius: 8px;">
+                    <h3 style="color: #28a745; margin: 0;">● กำลังส่งพิกัดพิกัด...</h3>
+                    <p id="truckDisplay" style="font-weight: bold;"></p>
+                </div>
+                <button onclick="location.reload()" class="btn-danger" style="margin-top: 20px;">หยุดการแชร์ตำแหน่ง</button>
+            </div>
         </div>
     </div>
 
@@ -52,59 +50,29 @@
         const db = getDatabase(app);
         const truckRef = ref(db, 'truckLocation');
 
-        let isTracking = false;
-        let watchId = null;
-        let wakeLock = null;
-        let lastSendTime = 0;
-
-        // 1. ตรวจสอบรหัสผ่าน
-        document.getElementById('loginBtn').onclick = () => {
+        window.loginDriver = () => {
             if(document.getElementById('password').value === "987654321") {
                 document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('setup-section').classList.remove('hidden');
-            } else {
-                alert("รหัสผ่านไม่ถูกต้อง!");
-            }
+                document.getElementById('active-section').classList.remove('hidden');
+            } else { alert("รหัสผ่านไม่ถูกต้อง"); }
         };
 
-        // 2. เริ่มส่งตำแหน่ง
-        document.getElementById('startBtn').onclick = () => {
-            const truckNo = document.getElementById('truckNo').value;
-            const routeName = document.getElementById('routeName').value;
-
-            if(!truckNo || !routeName) {
-                alert("กรุณากรอกข้อมูลให้ครบถ้วน");
-                return;
-            }
+        window.startSharing = () => {
+            const tNo = document.getElementById('truckNo').value;
+            const rName = document.getElementById('routeName').value;
+            if(!tNo || !rName) { alert("ระบุข้อมูลให้ครบ"); return; }
 
             if (navigator.geolocation) {
                 document.getElementById('setup-section').classList.add('hidden');
-                document.getElementById('active-section').classList.remove('hidden');
-                document.getElementById('displayInfo').innerText = `รถ: ${truckNo} | ${routeName}`;
-                
+                document.getElementById('sharing-status').classList.remove('hidden');
+                document.getElementById('truckDisplay').innerText = `รถหมายเลข: ${tNo} (${rName})`;
+
                 onDisconnect(truckRef).remove();
-                watchId = navigator.geolocation.watchPosition((pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    const now = Date.now();
-                    document.getElementById('coords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                    
-                    if (now - lastSendTime >= 5000) {
-                        set(truckRef, { lat, lng, truckNo, routeName, timestamp: now });
-                        lastSendTime = now;
-                    }
+                navigator.geolocation.watchPosition((pos) => {
+                    set(truckRef, { lat: pos.coords.latitude, lng: pos.coords.longitude, truckNo: tNo, routeName: rName, timestamp: Date.now() });
                 }, null, { enableHighAccuracy: true });
-
-                isTracking = true;
-                if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(lock => wakeLock = lock);
+                if ('wakeLock' in navigator) navigator.wakeLock.request('screen');
             }
-        };
-
-        // 3. หยุดการทำงาน
-        document.getElementById('stopBtn').onclick = () => {
-            navigator.geolocation.clearWatch(watchId);
-            remove(truckRef);
-            location.reload(); // รีเฟรชหน้าจอเพื่อล้างค่าทั้งหมด
         };
     </script>
 </body>
