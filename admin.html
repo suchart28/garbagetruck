@@ -18,8 +18,7 @@
         <div id="admin-dashboard" class="hidden">
             <div class="card">
                 <h3 style="margin: 0; color: #004085;">📊 สถิติผลการปฏิบัติงาน (รายเดือน)</h3>
-                <div id="statsBox" class="stats-container">
-                    </div>
+                <div id="statsBox" class="stats-container"></div>
             </div>
 
             <div class="card">
@@ -31,7 +30,14 @@
                     </div>
                 </div>
                 <table>
-                    <thead><tr><th>ประเภท</th><th>เบอร์ติดต่อ</th><th>เวลาที่แจ้ง</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                    <thead><tr>
+                        <th>รหัสงาน</th>
+                        <th>ประเภท</th>
+                        <th>เบอร์ติดต่อ</th>
+                        <th>เวลาที่แจ้ง</th>
+                        <th>สถานะ</th>
+                        <th>จัดการ</th>
+                    </tr></thead>
                     <tbody id="reportTable"></tbody>
                 </table>
             </div>
@@ -88,12 +94,11 @@
                 allReports = [];
 
                 if (!data) { 
-                    table.innerHTML = "<tr><td colspan='5' style='text-align:center'>ไม่มีข้อมูลงานค้างดำเนินการ</td></tr>"; 
+                    table.innerHTML = "<tr><td colspan='6' style='text-align:center'>ไม่มีข้อมูลงานค้างดำเนินการ</td></tr>"; 
                     statsBox.innerHTML = "<p style='color:#666;'>ยังไม่มีข้อมูลการปฏิบัติงานในระบบ</p>";
                     return; 
                 }
 
-                // 1. แปลงข้อมูลเป็น Array และคำนวณสถิติ
                 let monthlyStats = {};
 
                 Object.keys(data).forEach(id => {
@@ -101,19 +106,15 @@
                     r.id = id; 
                     allReports.push(r);
 
-                    // คำนวณสถิติรายเดือน
                     const d = new Date(r.timestamp);
                     const monthKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`;
                     const monthLabel = d.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
 
-                    if(!monthlyStats[monthKey]) {
-                        monthlyStats[monthKey] = { total: 0, done: 0, label: monthLabel };
-                    }
+                    if(!monthlyStats[monthKey]) monthlyStats[monthKey] = { total: 0, done: 0, label: monthLabel };
                     monthlyStats[monthKey].total += 1;
                     if(r.status === 'done') monthlyStats[monthKey].done += 1;
                 });
 
-                // แสดงผลสถิติ (เรียงเดือนล่าสุดขึ้นก่อน)
                 const sortedMonths = Object.keys(monthlyStats).sort((a,b) => b.localeCompare(a));
                 sortedMonths.forEach(mKey => {
                     const stat = monthlyStats[mKey];
@@ -126,19 +127,20 @@
                     `;
                 });
 
-                // 2. กรองเฉพาะงานที่ "ยังไม่เสร็จ" และเรียงล่าสุดขึ้นก่อน
                 let activeTasks = allReports.filter(r => r.status !== 'done');
-                activeTasks.sort((a, b) => b.timestamp - a.timestamp); // เรียง Descending (ล่าสุดขึ้นก่อน)
+                activeTasks.sort((a, b) => b.timestamp - a.timestamp); 
 
                 if(activeTasks.length === 0) {
-                    table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#28a745; font-weight:bold;'>ไม่มีงานค้างดำเนินการ 🎉</td></tr>";
+                    table.innerHTML = "<tr><td colspan='6' style='text-align:center; color:#28a745; font-weight:bold;'>ไม่มีงานค้างดำเนินการ 🎉</td></tr>";
                 } else {
                     activeTasks.forEach(r => {
                         const time = new Date(r.timestamp).toLocaleString('th-TH');
+                        const rIdDisplay = r.reportId || "-"; // ถ้าระบบเก่าไม่มีรหัส
                         let statusClass = r.status === 'pending' ? 'status-pending' : 'status-process';
                         let statusText = r.status === 'pending' ? 'รอดำเนินการ' : 'กำลังดำเนินการ';
 
                         const row = `<tr>
+                            <td style="color:#007bff; font-weight:bold;">${rIdDisplay}</td>
                             <td><b>${r.type}</b></td>
                             <td>${r.phone || '-'}</td>
                             <td style="font-size:12px;">${time}</td>
@@ -149,7 +151,7 @@
                                     <option value="process" ${r.status==='process'?'selected':''}>กำลังทำ</option>
                                     <option value="done" ${r.status==='done'?'selected':''}>เสร็จสิ้น ✅</option>
                                 </select>
-                                <button onclick="printTicket('${r.type}', '${r.phone}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width:auto; padding:5px 8px;">🖨️</button>
+                                <button onclick="printTicket('${rIdDisplay}', '${r.type}', '${r.phone}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width:auto; padding:5px 8px;">🖨️</button>
                                 <button onclick="deleteReport('${r.id}')" class="btn-danger" style="width:auto; padding:5px 8px;">🗑️</button>
                             </td>
                         </tr>`;
@@ -159,23 +161,18 @@
             });
         }
 
-        window.updateStatus = (id, newStatus) => { 
-            // เมื่อเปลี่ยนเป็น done งานจะหายไปจากตารางทันที (เพราะข้อมูลโหลดใหม่และถูก filter ออก)
-            update(ref(db, `reports/${id}`), { status: newStatus }); 
-        };
-        
-        window.deleteReport = (id) => { 
-            if(confirm("คำเตือน: หากลบข้อมูลนี้จะถูกหักออกจากสถิติรายเดือนด้วย ยืนยันการลบ?")) remove(ref(db, `reports/${id}`)); 
-        };
+        window.updateStatus = (id, newStatus) => { update(ref(db, `reports/${id}`), { status: newStatus }); };
+        window.deleteReport = (id) => { if(confirm("คำเตือน: หากลบข้อมูลนี้จะถูกหักออกจากสถิติรายเดือนด้วย ยืนยันการลบ?")) remove(ref(db, `reports/${id}`)); };
         
         // ฟังก์ชันพิมพ์ใบงานเดี่ยว
-        window.printTicket = (type, phone, time, lat, lng) => {
+        window.printTicket = (rId, type, phone, time, lat, lng) => {
             const printSec = document.getElementById('print-section');
             const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             printSec.innerHTML = `
                 <div class="ticket">
                     <h2>ใบสั่งงานเทศบาล</h2>
                     <div class="ticket-info">
+                        <b>รหัสงาน:</b> <span style="color:#007bff;">${rId}</span><br>
                         <b>ประเภทปัญหา:</b> ${type}<br>
                         <b>เบอร์ติดต่อ:</b> ${phone}<br>
                         <b>เวลาแจ้ง:</b> ${time}<br>
@@ -194,7 +191,6 @@
         window.printSummaryTable = () => {
             if (allReports.length === 0) return;
             
-            // ดึงเฉพาะงานที่ค้างอยู่ และเรียงล่าสุด
             let pendingTasks = allReports.filter(r => r.status !== 'done');
             pendingTasks.sort((a, b) => b.timestamp - a.timestamp);
             let tasksToPrint = pendingTasks.slice(0, 5);
@@ -204,9 +200,14 @@
             let rows = '';
             tasksToPrint.forEach((r, idx) => {
                 const time = new Date(r.timestamp).toLocaleString('th-TH');
+                const rIdDisplay = r.reportId || "-";
                 rows += `<tr>
                     <td style="text-align:center;">${idx+1}</td>
-                    <td><b>${r.type}</b><br><small>${time}</small></td>
+                    <td>
+                        <b style="color:#007bff;">${rIdDisplay}</b><br>
+                        <b>${r.type}</b><br>
+                        <small>${time}</small>
+                    </td>
                     <td>${r.phone || '-'}</td>
                     <td style="text-align:center;"><div id="qr-${idx}" class="row-qr"></div></td>
                     <td></td>
@@ -218,7 +219,7 @@
                 <div class="print-table-container">
                     <h2 style="text-align:center;">ตารางปฏิบัติงานเก็บขยะ</h2>
                     <table class="print-list-table">
-                        <thead><tr><th style="width:50px;">#</th><th>งาน/เวลา</th><th>เบอร์ติดต่อ</th><th style="width:100px;">สแกนนำทาง</th><th style="width:120px;">ลายมือชื่อ</th></tr></thead>
+                        <thead><tr><th style="width:30px;">#</th><th>รหัสงาน/ประเภท/เวลา</th><th>เบอร์ติดต่อ</th><th style="width:80px;">สแกนนำทาง</th><th style="width:120px;">ลายมือชื่อ</th></tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                     <div style="margin-top: 40px; display: flex; justify-content: space-between;">
