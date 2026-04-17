@@ -12,23 +12,17 @@
         <h3 style="margin:0;">รถเก็บขยะเทศบาล</h3>
         <div id="distance-info">กำลังหาพิกัด...</div>
     </div>
-
     <div id="map"></div>
-
     <div class="report-btn-container">
         <button class="btn-report" onclick="openModal()">⚠️ แจ้งปัญหาขยะ</button>
     </div>
-
     <div id="reportModal" class="modal">
         <div class="modal-content">
             <h3>แจ้งปัญหาขยะ</h3>
-            <p style="font-size: 14px; color: #555;">ระบุเบอร์โทรและประเภทที่ต้องการให้จัดเก็บ</p>
-            
-            <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ (จำเป็น)" style="margin-bottom: 15px; border: 2px solid #ff9800;">
-            
-            <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary" style="margin-bottom: 10px;">ขยะชิ้นใหญ่ (เฟอร์นิเจอร์/ที่นอน)</button>
-            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800;">ขยะล้นถัง / จุดพักขยะเต็ม</button>
-            <button onclick="closeModal()" class="btn-danger" style="margin-top: 15px;">ยกเลิก</button>
+            <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ (จำเป็น)">
+            <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary">ขยะชิ้นใหญ่</button>
+            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800;">ขยะล้นถัง</button>
+            <button onclick="closeModal()" class="btn-danger">ยกเลิก</button>
         </div>
     </div>
 
@@ -50,7 +44,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-
         const map = L.map('map').setView([16.4322, 102.8236], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -68,40 +61,35 @@
             const d = snapshot.val();
             if (d) {
                 const pos = [d.lat, d.lng];
-                const html = `<div class="truck-icon-container"><div class="truck-icon truck-moving"></div><div class="truck-label">${d.truckNo}</div></div>`;
-                if (!truckMarker) truckMarker = L.marker(pos, { icon: L.divIcon({ className:'', html, iconSize:[100,40], iconAnchor:[50,12]}) }).addTo(map);
-                else { truckMarker.setLatLng(pos); truckMarker.setIcon(L.divIcon({ className:'', html, iconSize:[100,40], iconAnchor:[50,12]})); }
+                const labelText = `${d.truckNo} (${d.routeName})`;
+                // สลับป้ายชื่อมาไว้ก่อน (บน) แล้วตามด้วยไอคอน (ล่าง)
+                const html = `<div class="truck-icon-container">
+                                <div class="truck-label">${labelText}</div>
+                                <div class="truck-icon truck-moving"></div>
+                              </div>`;
+                
+                const iconOptions = { className: '', html: html, iconSize: [100, 50], iconAnchor: [50, 38] };
+
+                if (!truckMarker) truckMarker = L.marker(pos, { icon: L.divIcon(iconOptions) }).addTo(map);
+                else { truckMarker.setLatLng(pos); truckMarker.setIcon(L.divIcon(iconOptions)); }
                 
                 if(userLatLng) {
                     const dist = map.distance(userLatLng, pos);
-                    document.getElementById('distance-info').innerHTML = `รถอยู่ห่างจากคุณ: <b>${dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' ม.'}</b>`;
+                    document.getElementById('distance-info').innerHTML = `ระยะห่าง: <b>${dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' ม.'}</b>`;
                 }
-            } else { document.getElementById('distance-info').innerText = "ไม่มีรถปฏิบัติงาน"; if(truckMarker){map.removeLayer(truckMarker); truckMarker=null;} }
+            } else { 
+                document.getElementById('distance-info').innerText = "ไม่มีรถปฏิบัติงาน"; 
+                if(truckMarker){ map.removeLayer(truckMarker); truckMarker=null; } 
+            }
         });
 
-        // อัปเดตฟังก์ชันส่งข้อมูล ให้ดึงเบอร์โทรและบังคับกรอก
         window.sendReport = (type) => {
-            const phoneStr = document.getElementById('reporterPhone').value;
-            
-            if(!phoneStr) { alert("กรุณาระบุเบอร์โทรติดต่อกลับ เพื่อให้เจ้าหน้าที่ประสานงานได้ครับ"); return; }
-            if(!userLatLng) { alert("กรุณารอระบบระบุพิกัดของคุณบนแผนที่ก่อนทำการแจ้งเหตุ"); return; }
-            
+            const phone = document.getElementById('reporterPhone').value;
+            if(!phone || !userLatLng) { alert("ข้อมูลไม่ครบ"); return; }
             const newRef = push(ref(db, 'reports'));
-            set(newRef, { 
-                type: type, 
-                phone: phoneStr, 
-                lat: userLatLng.lat, 
-                lng: userLatLng.lng, 
-                timestamp: Date.now(), 
-                status: 'pending' 
-            })
-            .then(() => { 
-                alert("แจ้งเหตุสำเร็จ แอดมินได้รับข้อมูลและเบอร์ติดต่อของคุณแล้วครับ"); 
-                document.getElementById('reporterPhone').value = ''; // ล้างค่าเบอร์โทร
-                closeModal(); 
-            });
+            set(newRef, { type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: Date.now(), status: 'pending' })
+            .then(() => { alert("แจ้งเหตุสำเร็จ"); closeModal(); });
         };
-
         window.openModal = () => document.getElementById('reportModal').style.display = 'flex';
         window.closeModal = () => document.getElementById('reportModal').style.display = 'none';
     </script>
