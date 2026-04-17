@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบคนขับรถเก็บขยะ (โหมดประหยัดพลังงาน)</title>
+    <title>ระบบคนขับรถเก็บขยะ</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,13 +14,15 @@
             <div id="coords" style="margin-top:10px; font-size:12px; color:#888;">พิกัดล่าสุด: -</div>
         </div>
         <button id="toggleBtn">เริ่มส่งตำแหน่ง</button>
+        <p style="font-size: 12px; color: #d32f2f; margin-top: 15px;">
+            * ข้อควรระวัง: ห้ามสลับไปแอปอื่น ระบบจะป้องกันหน้าจอดับอัตโนมัติให้แล้ว
+        </p>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getDatabase, ref, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-        // ตั้งค่า Firebase ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -38,10 +40,38 @@
 
         let watchId = null;
         let isTracking = false;
-        
-        // ตัวแปรสำหรับหน่วงเวลาส่งข้อมูลเพื่อประหยัดเน็ต
         let lastSendTime = 0;
-        const SEND_INTERVAL = 5000; // ส่งพิกัดทุกๆ 5 วินาที
+        const SEND_INTERVAL = 5000;
+        
+        // ตัวแปรสำหรับคุมหน้าจอไม่ให้ดับ
+        let wakeLock = null;
+
+        // ฟังก์ชันขอสิทธิ์ให้หน้าจอเปิดค้างไว้
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('เปิดระบบป้องกันหน้าจอดับสำเร็จ');
+                    
+                    // หากหน้าจอกลับมาทำงาน ให้ขอสิทธิ์ใหม่ (เผื่อเผลอกดพับจอ)
+                    wakeLock.addEventListener('release', () => {
+                        console.log('ระบบป้องกันหน้าจอดับถูกยกเลิก');
+                    });
+                }
+            } catch (err) {
+                console.error(`Wake Lock Error: ${err.name}, ${err.message}`);
+            }
+        }
+
+        // ฟังก์ชันปล่อยสิทธิ์ให้หน้าจอดับได้ตามปกติ
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release()
+                    .then(() => {
+                        wakeLock = null;
+                    });
+            }
+        }
 
         function toggleTracking() {
             const btn = document.getElementById('toggleBtn');
@@ -50,7 +80,6 @@
 
             if (!isTracking) {
                 if (navigator.geolocation) {
-                    // ถ้าเน็ตหลุด ให้ลบพิกัดรถออกจากแผนที่ผู้ใช้อัตโนมัติ
                     onDisconnect(truckRef).remove();
 
                     watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
@@ -64,6 +93,9 @@
                     btn.classList.add('stop');
                     statusText.innerText = "สถานะ: กำลังส่งตำแหน่ง...";
                     statusText.className = "success";
+                    
+                    // เรียกใช้ฟังก์ชันกันจอดับ
+                    requestWakeLock();
                 } else {
                     alert("เบราว์เซอร์ของคุณไม่รองรับ GPS");
                 }
@@ -76,29 +108,33 @@
                 statusText.className = "danger";
                 coordsText.innerText = "พิกัดล่าสุด: -";
                 
-                // ลบพิกัดออกและยกเลิก onDisconnect
                 remove(truckRef);
                 onDisconnect(truckRef).cancel();
+                
+                // คืนค่าให้จอดับได้ปกติเมื่อเลิกงาน
+                releaseWakeLock();
             }
         }
 
         document.getElementById('toggleBtn').addEventListener('click', toggleTracking);
+
+        // จัดการกรณีคนขับสลับไปแอปอื่นแล้วกลับมาใหม่ ให้ดึงสิทธิ์กันจอดับคืนมา
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
 
         function updatePosition(position) {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             const now = Date.now();
             
-            // อัปเดตตัวเลขหน้าจอมือถือคนขับ
             document.getElementById('coords').innerText = `พิกัด: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
-            // ส่งขึ้นฐานข้อมูลทุกๆ 5 วินาที
             if (now - lastSendTime >= SEND_INTERVAL) {
                 set(truckRef, { lat: lat, lng: lng, timestamp: now })
-                    .then(() => {
-                        console.log("ส่งพิกัดสำเร็จ");
-                        lastSendTime = now;
-                    })
+                    .then(() => { lastSendTime = now; })
                     .catch((error) => console.error("เน็ตหลุด ไม่สามารถส่งได้", error));
             }
         }
