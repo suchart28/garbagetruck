@@ -9,8 +9,8 @@
 </head>
 <body>
     <div class="info-box">
-        <h3 style="margin-top:0; margin-bottom: 5px;">รถเก็บขยะเทศบาล</h3>
-        <div id="distance-info">กำลังค้นหาตำแหน่งของคุณ...</div>
+        <h3 style="margin:0; font-size: 18px;">รถเก็บขยะเทศบาล</h3>
+        <div id="distance-info">กำลังหาพิกัดของคุณ...</div>
     </div>
     <div id="map"></div>
 
@@ -33,67 +33,53 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // จุดศูนย์กลางเริ่มต้น (ขอนแก่น)
         const map = L.map('map').setView([16.4322, 102.8236], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
 
-        let userLatLng = null, truckLatLng = null;
-        let userMarker = null, truckMarker = null;
+        let userLatLng = null, truckMarker = null, userMarker = null;
 
-        // กำหนด Anchor ให้อยู่กึ่งกลางไอคอนเพื่อปักหมุดให้แน่น
-        const truckIcon = L.divIcon({ 
-            className: 'truck-icon truck-moving', 
-            iconSize: [24, 24],
-            iconAnchor: [12, 12], 
-            html: '' 
-        });
-        
-        const userIcon = L.divIcon({ 
-            className: 'user-icon pulse-red', 
-            iconSize: [16, 16],
-            iconAnchor: [8, 8], 
-            html: '' 
-        });
+        const userIcon = L.divIcon({ className: 'user-icon pulse-red', iconSize: [16, 16], iconAnchor: [8, 8], html: '' });
 
-        // 1. หาตำแหน่งผู้ใช้
         map.locate({setView: true, maxZoom: 16});
-        map.on('locationfound', function(e) {
+        map.on('locationfound', (e) => {
             userLatLng = e.latlng;
-            if(!userMarker) {
-                userMarker = L.marker(userLatLng, { icon: userIcon }).addTo(map);
-            } else {
-                userMarker.setLatLng(userLatLng);
-            }
-            calculateDistance();
+            if(!userMarker) userMarker = L.marker(userLatLng, { icon: userIcon }).addTo(map);
+            else userMarker.setLatLng(userLatLng);
         });
 
-        // 2. รับพิกัดรถขยะ
         onValue(ref(db, 'truckLocation'), (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                truckLatLng = L.latLng(data.lat, data.lng);
+                const truckPos = [data.lat, data.lng];
+                const labelText = `รถ: ${data.truckNo} (${data.routeName})`;
+
                 if (!truckMarker) {
-                    truckMarker = L.marker(truckLatLng, {icon: truckIcon}).addTo(map);
+                    // สร้างไอคอนที่มีป้ายข้อความในตัว
+                    const truckHtml = `<div class="truck-icon-container">
+                                        <div class="truck-icon truck-moving"></div>
+                                        <div class="truck-label">${labelText}</div>
+                                       </div>`;
+                    const customIcon = L.divIcon({ className: '', html: truckHtml, iconSize: [100, 40], iconAnchor: [50, 12] });
+                    truckMarker = L.marker(truckPos, { icon: customIcon }).addTo(map);
                 } else {
-                    truckMarker.setLatLng(truckLatLng);
+                    // อัปเดตพิกัดและข้อความ
+                    const truckHtml = `<div class="truck-icon-container">
+                                        <div class="truck-icon truck-moving"></div>
+                                        <div class="truck-label">${labelText}</div>
+                                       </div>`;
+                    truckMarker.setIcon(L.divIcon({ className: '', html: truckHtml, iconSize: [100, 40], iconAnchor: [50, 12] }));
+                    truckMarker.setLatLng(truckPos);
                 }
-                calculateDistance();
+
+                if(userLatLng) {
+                    const dist = map.distance(userLatLng, truckPos);
+                    document.getElementById('distance-info').innerHTML = `ระยะห่าง: <strong>${dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' ม.'}</strong>`;
+                }
             } else {
-                document.getElementById('distance-info').innerHTML = "<span style='color:red;'>รถไม่ได้ออกปฏิบัติงาน</span>";
-                if (truckMarker) { map.removeLayer(truckMarker); truckMarker = null; }
+                document.getElementById('distance-info').innerHTML = "<span class='danger'>ไม่มีรถปฏิบัติงาน</span>";
+                if(truckMarker) { map.removeLayer(truckMarker); truckMarker = null; }
             }
         });
-
-        function calculateDistance() {
-            const infoDiv = document.getElementById('distance-info');
-            if (userLatLng && truckLatLng) {
-                const distanceMeters = userLatLng.distanceTo(truckLatLng);
-                const displayDist = distanceMeters > 1000 ? (distanceMeters / 1000).toFixed(2) + " กม." : Math.round(distanceMeters) + " ม.";
-                infoDiv.innerHTML = `ระยะห่างจากคุณ: <strong>${displayDist}</strong>`;
-            }
-        }
     </script>
 </body>
 </html>
