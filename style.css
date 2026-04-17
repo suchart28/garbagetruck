@@ -1,4 +1,3 @@
-/* นำเข้าฟอนต์ Chakra Petch */
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;700&display=swap');
 
 body, html { 
@@ -9,11 +8,10 @@ body, html {
 
 #map { height: 100vh; width: 100vw; z-index: 1; }
 
-/* Dashboard & Cards */
+/* Dashboard & UI */
 .admin-container { padding: 20px; max-width: 1000px; margin: 0 auto; }
 .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; overflow-x: auto; }
 
-/* Status Badges */
 .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
 .status-pending { background: #fff3cd; color: #856404; }
 .status-process { background: #cce5ff; color: #004085; }
@@ -23,7 +21,6 @@ table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
 th { background: #f8f9fa; }
 
-/* User UI Elements */
 .info-box {
     position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
     z-index: 1000; background: white; padding: 15px 25px; border-radius: 10px;
@@ -41,13 +38,12 @@ th { background: #f8f9fa; }
     font-size: 16px; pointer-events: auto; 
 }
 
-/* Modal */
 .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
 .modal-content { background: white; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; text-align: center; }
 
-/* Driver Panel */
 .driver-panel { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center; width: 85%; max-width: 380px; margin: 50px auto; }
-input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Chakra Petch'; }
+input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Chakra Petch'; font-size: 16px; }
+
 button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: 'Chakra Petch'; margin-top: 5px; }
 .btn-primary { background: #007bff; color: white; }
 .btn-danger { background: #dc3545; color: white; }
@@ -55,57 +51,30 @@ button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: p
 .btn-print { background: #6c757d; color: white; }
 .hidden { display: none; }
 
-/* Map Icons */
-.truck-icon-container {
-    display: flex;
-    flex-direction: column; /* ป้ายอยู่บน ไอคอนอยู่ล่าง */
-    align-items: center;
-    justify-content: flex-end;
-    height: 50px; /* ฟิกความสูงเพื่อคำนวณ Anchor */
-}
-
-.truck-icon {
-    background-color: #28a745;
-    border-radius: 50%;
-    border: 2px solid white;
-    width: 24px;
-    height: 24px;
-    box-sizing: border-box;
-}
-
+/* Map Markers */
+.truck-icon-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 50px; }
+.truck-icon { background-color: #28a745; border-radius: 50%; border: 2px solid white; width: 24px; height: 24px; box-sizing: border-box; }
 .truck-moving { animation: pulse-green 1.5s infinite; }
-@keyframes pulse-green {
-    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
-    70% { box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-}
-
-.truck-label {
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    margin-bottom: 4px; /* เว้นระยะห่างจากไอคอนด้านล่าง */
-    font-weight: bold;
-    white-space: nowrap;
-}
-
+@keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); } }
+.truck-label { background: rgba(0, 0, 0, 0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 4px; font-weight: bold; white-space: nowrap; }
 .user-icon { background-color: #ff0000; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(255, 0, 0, 0.5); box-sizing: border-box; }
 .pulse-red { animation: pulse-red-animation 1.5s infinite; }
-@keyframes pulse-red-animation {
-    0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
-    70% { box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
-}
+@keyframes pulse-red-animation { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); } }
 
-/* Printing Settings */
-.ticket { border: 2px dashed #333; padding: 30px; max-width: 400px; margin: 0 auto; text-align: center; background: white; }
-.print-table-container { width: 100%; background: white; padding: 10px; }
+/* Print Templates */
+.ticket { border: 2px dashed #333; padding: 30px; max-width: 420px; margin: 0 auto; text-align: center; background: white; }
+.ticket h2 { margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 10px; }
+.ticket-info { text-align: left; margin: 20px 0; font-size: 17px; line-height: 1.8; }
+#qrcode { display: flex; justify-content: center; margin: 15px 0; }
+
+.print-table-container { width: 100%; background: white; padding: 10px; box-sizing: border-box; }
 .print-list-table { width: 100%; border-collapse: collapse; }
-.print-list-table th, .print-list-table td { border: 1px solid #000; padding: 10px; text-align: left; }
+.print-list-table th, .print-list-table td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 15px; }
+.print-list-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
 .row-qr { display: flex; justify-content: center; margin-top: 5px; }
+.row-qr img { max-width: 65px; max-height: 65px; }
 
+@page { size: A4 portrait; margin: 15mm; }
 @media print {
     body * { visibility: hidden; } 
     #print-section, #print-section * { visibility: visible; } 
