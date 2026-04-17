@@ -19,6 +19,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
+        // ตั้งค่า Firebase ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -33,6 +34,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
+        // แสดงแผนที่ (ศูนย์กลางเริ่มต้นที่จังหวัดขอนแก่น)
         const map = L.map('map').setView([16.4322, 102.8236], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
@@ -43,21 +45,36 @@
         let userMarker = null;
         let truckMarker = null;
 
-        // กำหนดไอคอน
-        const truckIcon = L.divIcon({ className: 'truck-icon truck-moving', iconSize: [24, 24] });
-        const userIcon = L.divIcon({ className: 'user-icon pulse-red', iconSize: [16, 16] }); // ไอคอนผู้ใช้ใหม่
+        // กำหนดไอคอน พร้อมใส่ iconAnchor เพื่อล็อกพิกัดตรงกลาง
+        const truckIcon = L.divIcon({ 
+            className: 'truck-icon truck-moving', 
+            iconSize: [24, 24],
+            iconAnchor: [12, 12], 
+            html: '' 
+        });
+        
+        const userIcon = L.divIcon({ 
+            className: 'user-icon pulse-red', 
+            iconSize: [16, 16],
+            iconAnchor: [8, 8], 
+            html: '' 
+        });
 
-        // 1. หาตำแหน่งของผู้ใช้
+        // 1. หาตำแหน่งของผู้ใช้ (ประชาชน)
         map.locate({setView: true, maxZoom: 16});
         map.on('locationfound', function(e) {
             userLatLng = e.latlng;
             if(!userMarker) {
-                // สร้าง Marker โดยใส่ icon และลบ Popup ออก
+                // สร้างไอคอนแดง ไม่มี Popup ข้อความ
                 userMarker = L.marker(userLatLng, { icon: userIcon }).addTo(map);
             } else {
                 userMarker.setLatLng(userLatLng);
             }
             calculateDistance();
+        });
+
+        map.on('locationerror', function(e) {
+            document.getElementById('distance-info').innerHTML = "ไม่สามารถหาตำแหน่งของคุณได้ (กรุณาเปิด GPS)";
         });
 
         // 2. ติดตามตำแหน่งรถขยะจาก Firebase
@@ -73,11 +90,15 @@
                 }
                 calculateDistance();
             } else {
-                document.getElementById('distance-info').innerHTML = "<span style='color:red;'>รถเก็บขยะไม่ได้ออกปฏิบัติงาน</span>";
-                if (truckMarker) { map.removeLayer(truckMarker); truckMarker = null; }
+                document.getElementById('distance-info').innerHTML = "<span style='color:red;'>รถเก็บขยะไม่ได้ออกปฏิบัติงานในขณะนี้</span>";
+                if (truckMarker) { 
+                    map.removeLayer(truckMarker); 
+                    truckMarker = null; 
+                }
             }
         });
 
+        // 3. คำนวณระยะห่าง
         function calculateDistance() {
             const infoDiv = document.getElementById('distance-info');
             if (userLatLng && truckLatLng) {
