@@ -14,13 +14,20 @@
             <input type="password" id="password" placeholder="ใส่รหัสผ่านแอดมิน">
             <button onclick="loginAdmin()" class="btn-primary">เข้าสู่ระบบ</button>
         </div>
+
         <div id="admin-dashboard" class="hidden">
             <div class="card">
+                <h3 style="margin: 0; color: #004085;">📊 สถิติผลการปฏิบัติงาน (รายเดือน)</h3>
+                <div id="statsBox" class="stats-container">
+                    </div>
+            </div>
+
+            <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                    <h2>รายการแจ้งเหตุ</h2>
+                    <h2 style="margin: 0; color: #dc3545;">🚨 งานที่ค้างดำเนินการ (เรียงล่าสุด)</h2>
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="printSummaryTable()" class="btn-success" style="width:auto; padding:8px 15px;">🖨️ พิมพ์ตาราง (A4)</button>
-                        <button onclick="logoutAdmin()" class="btn-danger" style="width:auto; padding:8px 15px;">Logout</button>
+                        <button onclick="printSummaryTable()" class="btn-success" style="width:auto; padding:8px 15px;">🖨️ พิมพ์ตารางงาน (A4)</button>
+                        <button onclick="logoutAdmin()" class="btn-danger" style="width:auto; padding:8px 15px; background-color: #6c757d;">Logout</button>
                     </div>
                 </div>
                 <table>
@@ -49,7 +56,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        let allReports = null;
+        let allReports = []; 
 
         window.onload = () => {
             if (localStorage.getItem('isAdminLoggedIn') === 'true') {
@@ -74,37 +81,94 @@
         function loadAllReports() {
             onValue(ref(db, 'reports'), (snapshot) => {
                 const data = snapshot.val();
-                allReports = data;
                 const table = document.getElementById('reportTable');
+                const statsBox = document.getElementById('statsBox');
                 table.innerHTML = "";
-                if (!data) return;
+                statsBox.innerHTML = "";
+                allReports = [];
+
+                if (!data) { 
+                    table.innerHTML = "<tr><td colspan='5' style='text-align:center'>ไม่มีข้อมูลงานค้างดำเนินการ</td></tr>"; 
+                    statsBox.innerHTML = "<p style='color:#666;'>ยังไม่มีข้อมูลการปฏิบัติงานในระบบ</p>";
+                    return; 
+                }
+
+                // 1. แปลงข้อมูลเป็น Array และคำนวณสถิติ
+                let monthlyStats = {};
+
                 Object.keys(data).forEach(id => {
                     const r = data[id];
-                    const time = new Date(r.timestamp).toLocaleString('th-TH');
-                    const row = `<tr>
-                        <td><b>${r.type}</b></td>
-                        <td>${r.phone || '-'}</td>
-                        <td style="font-size:12px;">${time}</td>
-                        <td><span class="status-badge status-${r.status}">${r.status}</span></td>
-                        <td>
-                            <select onchange="updateStatus('${id}', this.value)" style="width:100px; padding:5px;">
-                                <option value="pending" ${r.status==='pending'?'selected':''}>รอ</option>
-                                <option value="process" ${r.status==='process'?'selected':''}>ทำ</option>
-                                <option value="done" ${r.status==='done'?'selected':''}>เสร็จ</option>
-                            </select>
-                            <button onclick="printTicket('${r.type}', '${r.phone}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width:auto; padding:5px 8px;">🖨️</button>
-                            <button onclick="deleteReport('${id}')" class="btn-danger" style="width:auto; padding:5px 8px;">🗑️</button>
-                        </td>
-                    </tr>`;
-                    table.innerHTML += row;
+                    r.id = id; 
+                    allReports.push(r);
+
+                    // คำนวณสถิติรายเดือน
+                    const d = new Date(r.timestamp);
+                    const monthKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`;
+                    const monthLabel = d.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+
+                    if(!monthlyStats[monthKey]) {
+                        monthlyStats[monthKey] = { total: 0, done: 0, label: monthLabel };
+                    }
+                    monthlyStats[monthKey].total += 1;
+                    if(r.status === 'done') monthlyStats[monthKey].done += 1;
                 });
+
+                // แสดงผลสถิติ (เรียงเดือนล่าสุดขึ้นก่อน)
+                const sortedMonths = Object.keys(monthlyStats).sort((a,b) => b.localeCompare(a));
+                sortedMonths.forEach(mKey => {
+                    const stat = monthlyStats[mKey];
+                    statsBox.innerHTML += `
+                        <div class="stat-box">
+                            <h4>เดือน ${stat.label}</h4>
+                            <div class="count">${stat.done} <span style="font-size:14px; color:#333;">งานเสร็จ</span></div>
+                            <div class="total">รับแจ้งทั้งหมด ${stat.total} รายการ</div>
+                        </div>
+                    `;
+                });
+
+                // 2. กรองเฉพาะงานที่ "ยังไม่เสร็จ" และเรียงล่าสุดขึ้นก่อน
+                let activeTasks = allReports.filter(r => r.status !== 'done');
+                activeTasks.sort((a, b) => b.timestamp - a.timestamp); // เรียง Descending (ล่าสุดขึ้นก่อน)
+
+                if(activeTasks.length === 0) {
+                    table.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#28a745; font-weight:bold;'>ไม่มีงานค้างดำเนินการ 🎉</td></tr>";
+                } else {
+                    activeTasks.forEach(r => {
+                        const time = new Date(r.timestamp).toLocaleString('th-TH');
+                        let statusClass = r.status === 'pending' ? 'status-pending' : 'status-process';
+                        let statusText = r.status === 'pending' ? 'รอดำเนินการ' : 'กำลังดำเนินการ';
+
+                        const row = `<tr>
+                            <td><b>${r.type}</b></td>
+                            <td>${r.phone || '-'}</td>
+                            <td style="font-size:12px;">${time}</td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td>
+                                <select onchange="updateStatus('${r.id}', this.value)" style="width:120px; padding:5px;">
+                                    <option value="pending" ${r.status==='pending'?'selected':''}>รอ</option>
+                                    <option value="process" ${r.status==='process'?'selected':''}>กำลังทำ</option>
+                                    <option value="done" ${r.status==='done'?'selected':''}>เสร็จสิ้น ✅</option>
+                                </select>
+                                <button onclick="printTicket('${r.type}', '${r.phone}', '${time}', ${r.lat}, ${r.lng})" class="btn-print" style="width:auto; padding:5px 8px;">🖨️</button>
+                                <button onclick="deleteReport('${r.id}')" class="btn-danger" style="width:auto; padding:5px 8px;">🗑️</button>
+                            </td>
+                        </tr>`;
+                        table.innerHTML += row;
+                    });
+                }
             });
         }
 
-        window.updateStatus = (id, newStatus) => { update(ref(db, `reports/${id}`), { status: newStatus }); };
-        window.deleteReport = (id) => { if(confirm("ลบข้อมูลนี้?")) remove(ref(db, `reports/${id}`)); };
+        window.updateStatus = (id, newStatus) => { 
+            // เมื่อเปลี่ยนเป็น done งานจะหายไปจากตารางทันที (เพราะข้อมูลโหลดใหม่และถูก filter ออก)
+            update(ref(db, `reports/${id}`), { status: newStatus }); 
+        };
         
-        // 1. ใบงานทางการแบบเดี่ยว
+        window.deleteReport = (id) => { 
+            if(confirm("คำเตือน: หากลบข้อมูลนี้จะถูกหักออกจากสถิติรายเดือนด้วย ยืนยันการลบ?")) remove(ref(db, `reports/${id}`)); 
+        };
+        
+        // ฟังก์ชันพิมพ์ใบงานเดี่ยว
         window.printTicket = (type, phone, time, lat, lng) => {
             const printSec = document.getElementById('print-section');
             const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
@@ -113,28 +177,32 @@
                     <h2>ใบสั่งงานเทศบาล</h2>
                     <div class="ticket-info">
                         <b>ประเภทปัญหา:</b> ${type}<br>
-                        <b>เบอร์ติดต่อผู้แจ้ง:</b> ${phone}<br>
-                        <b>วันเวลาที่รับแจ้ง:</b> ${time}<br>
-                        <b>พิกัด (Lat, Lng):</b> ${lat.toFixed(5)}, ${lng.toFixed(5)}
+                        <b>เบอร์ติดต่อ:</b> ${phone}<br>
+                        <b>เวลาแจ้ง:</b> ${time}<br>
+                        <b>พิกัด:</b> ${lat.toFixed(5)}, ${lng.toFixed(5)}
                     </div>
                     <div id="qrcode"></div>
                     <p style="font-size: 14px; font-weight: bold;">(สแกน QR Code เพื่อนำทาง)</p>
-                    <p style="margin-top:40px; border-top:1px solid #ccc; padding-top:10px;">ลายมือชื่อผู้ปฏิบัติงาน: ...........................................</p>
+                    <p style="margin-top:40px; border-top:1px solid #ccc; padding-top:10px;">ลงชื่อผู้ปฏิบัติงาน: ...........................................</p>
                 </div>`;
             new QRCode(document.getElementById("qrcode"), { text: mapUrl, width: 150, height: 150 });
             printSec.classList.remove('hidden');
             setTimeout(() => { window.print(); printSec.classList.add('hidden'); }, 500);
         };
 
-        // 2. ตารางปฏิบัติงาน A4 (5 รายการ)
+        // ฟังก์ชันพิมพ์ตาราง A4
         window.printSummaryTable = () => {
-            if (!allReports) return;
-            let pendingTasks = Object.keys(allReports).filter(id => allReports[id].status !== 'done').slice(0, 5);
-            if (pendingTasks.length === 0) { alert("ไม่มีงานค้าง"); return; }
+            if (allReports.length === 0) return;
+            
+            // ดึงเฉพาะงานที่ค้างอยู่ และเรียงล่าสุด
+            let pendingTasks = allReports.filter(r => r.status !== 'done');
+            pendingTasks.sort((a, b) => b.timestamp - a.timestamp);
+            let tasksToPrint = pendingTasks.slice(0, 5);
+
+            if (tasksToPrint.length === 0) { alert("ไม่มีงานค้างดำเนินการ"); return; }
 
             let rows = '';
-            pendingTasks.forEach((id, idx) => {
-                const r = allReports[id];
+            tasksToPrint.forEach((r, idx) => {
                 const time = new Date(r.timestamp).toLocaleString('th-TH');
                 rows += `<tr>
                     <td style="text-align:center;">${idx+1}</td>
@@ -150,17 +218,16 @@
                 <div class="print-table-container">
                     <h2 style="text-align:center;">ตารางปฏิบัติงานเก็บขยะ</h2>
                     <table class="print-list-table">
-                        <thead><tr><th>#</th><th>งาน/เวลา</th><th>โทร</th><th style="width:100px;">สแกนนำทาง</th><th>ลายมือชื่อ</th></tr></thead>
+                        <thead><tr><th style="width:50px;">#</th><th>งาน/เวลา</th><th>เบอร์ติดต่อ</th><th style="width:100px;">สแกนนำทาง</th><th style="width:120px;">ลายมือชื่อ</th></tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                     <div style="margin-top: 40px; display: flex; justify-content: space-between;">
                         <div>ลงชื่อ .................................................. พนักงานขับรถ</div>
-                        <div>ลงชื่อ .................................................. หัวหน้าชุด</div>
+                        <div>ลงชื่อ .................................................. หัวหน้าชุดปฏิบัติการ</div>
                     </div>
                 </div>`;
 
-            pendingTasks.forEach((id, idx) => {
-                const r = allReports[id];
+            tasksToPrint.forEach((r, idx) => {
                 new QRCode(document.getElementById(`qr-${idx}`), { text: `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`, width: 65, height: 65 });
             });
 
