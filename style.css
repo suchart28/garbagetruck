@@ -9,82 +9,125 @@ body, html {
 
 #map { height: 100vh; width: 100vw; z-index: 1; }
 
-/* Dashboard & UI */
+/* --- ส่วนของ Admin & Dashboard --- */
 .admin-container { padding: 20px; max-width: 1000px; margin: 0 auto; }
-.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; overflow-x: auto; }
+.card { 
+    background: white; padding: 20px; border-radius: 12px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; 
+    overflow-x: auto; 
+}
 
-/* --- กล่องสถิติรายเดือน --- */
 .stats-container { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
 .stat-box { 
     background: #f8f9fa; padding: 15px 20px; border-radius: 10px; 
     min-width: 160px; text-align: center; border: 1px solid #e9ecef;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 .stat-box h4 { margin: 0 0 10px 0; color: #495057; font-size: 16px; border-bottom: 2px solid #ddd; padding-bottom: 5px;}
 .stat-box .count { font-size: 28px; font-weight: bold; color: #28a745; line-height: 1; margin-bottom: 5px; }
-.stat-box .total { font-size: 13px; color: #6c757d; }
 
 .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
 .status-pending { background: #fff3cd; color: #856404; }
 .status-process { background: #cce5ff; color: #004085; }
-.status-done { background: #d4edda; color: #155724; }
 
 table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
 th { background: #f8f9fa; }
 
+/* --- ส่วนของ User UI บนแผนที่ --- */
 .info-box {
     position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-    z-index: 1000; background: white; padding: 15px 25px; border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; min-width: 280px;
+    z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 10px 25px; 
+    border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+    text-align: center; min-width: 220px;
 }
 
-.report-btn-container {
-    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+/* ปุ่มลำโพงวงกลมลอยตัวมุมขวาบน */
+.btn-audio {
+    position: absolute; top: 20px; right: 20px; z-index: 1100;
+    background: #ffffff; color: #555; border: none; width: 55px; height: 55px;
+    border-radius: 50%; font-size: 24px; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex;
+    justify-content: center; align-items: center; transition: all 0.3s ease;
+}
+.btn-audio.active { background: #28a745; color: white; box-shadow: 0 4px 20px rgba(40, 167, 69, 0.4); }
+
+.report-btn-container { 
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
     z-index: 1000; width: 100%; text-align: center; pointer-events: none; 
 }
-
-.btn-report {
-    background-color: #ff9800; color: white; border: none; padding: 15px 25px;
-    border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    font-size: 16px; pointer-events: auto; 
+.btn-report { 
+    background-color: #ff9800; color: white; border: none; padding: 15px 25px; 
+    border-radius: 50px; font-weight: bold; cursor: pointer; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 16px; 
+    pointer-events: auto; font-family: 'Chakra Petch'; 
 }
 
-.modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
-.modal-content { background: white; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; text-align: center; }
+/* --- ป้ายพิกัดรถ (2 บรรทัด โปร่งใส) --- */
+.truck-icon-container { 
+    display: flex; flex-direction: column; align-items: center; 
+    justify-content: flex-end; height: 85px; 
+}
+.truck-label-box { 
+    display: flex; flex-direction: column; align-items: center; 
+    background: rgba(0, 0, 0, 0.65); padding: 4px 10px; border-radius: 8px; 
+    margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(2px);
+}
+.truck-id-label { color: white; font-size: 11px; font-weight: bold; white-space: nowrap; line-height: 1.4; }
+.truck-route-label { color: white; font-size: 10px; white-space: nowrap; line-height: 1.2; opacity: 0.9; }
 
-.driver-panel { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center; width: 85%; max-width: 380px; margin: 50px auto; }
-input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Chakra Petch'; font-size: 16px; }
+/* วงกลมพิกัดเขียวกระพริบ */
+.truck-icon { 
+    background-color: #28a745; border: 2px solid white; width: 22px; 
+    height: 22px; border-radius: 50%; box-shadow: 0 0 10px rgba(40, 167, 69, 0.5); 
+}
+.truck-moving { animation: pulse-green 1.5s infinite; }
+@keyframes pulse-green { 
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); } 
+    70% { box-shadow: 0 0 0 12px rgba(40, 167, 69, 0); } 
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); } 
+}
 
-button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: 'Chakra Petch'; margin-top: 5px; }
+/* --- ระบบ Login & Driver UI --- */
+.driver-panel { 
+    background: white; padding: 25px; border-radius: 15px; 
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center; 
+    width: 85%; max-width: 380px; margin: 50px auto; 
+}
+input, select { 
+    width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; 
+    border-radius: 8px; box-sizing: border-box; font-family: 'Chakra Petch'; 
+}
+button { 
+    width: 100%; padding: 12px; border: none; border-radius: 8px; 
+    cursor: pointer; font-weight: bold; font-family: 'Chakra Petch'; margin-top: 5px; 
+}
+
 .btn-primary { background: #007bff; color: white; }
 .btn-danger { background: #dc3545; color: white; }
 .btn-success { background: #28a745; color: white; }
-.btn-print { background: #6c757d; color: white; }
-.hidden { display: none; }
+.btn-print { background: #6c757d; color: white; width: auto; padding: 5px 10px; }
 
-/* Map Markers */
-.truck-icon-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 50px; }
-.truck-icon { background-color: #28a745; border-radius: 50%; border: 2px solid white; width: 24px; height: 24px; box-sizing: border-box; }
-.truck-moving { animation: pulse-green 1.5s infinite; }
-@keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); } }
-.truck-label { background: rgba(0, 0, 0, 0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 4px; font-weight: bold; white-space: nowrap; }
-.user-icon { background-color: #ff0000; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(255, 0, 0, 0.5); box-sizing: border-box; }
-.pulse-red { animation: pulse-red-animation 1.5s infinite; }
-@keyframes pulse-red-animation { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(255, 0, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); } }
+/* การจัดการการซ่อน/แสดงผล */
+.hidden { display: none !important; }
+#login-section, #setup-section, #sharing-status, #admin-login-section, #admin-dashboard { display: none; }
+.visible { display: block !important; }
 
-/* Print Templates */
+/* --- Modal --- */
+.modal { 
+    display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; 
+    background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; 
+}
+.modal-content { 
+    background: white; padding: 25px; border-radius: 15px; 
+    width: 85%; max-width: 400px; text-align: center; 
+}
+
+/* --- ส่วนของใบงานและการพิมพ์ --- */
 .ticket { border: 2px dashed #333; padding: 30px; max-width: 420px; margin: 0 auto; text-align: center; background: white; }
-.ticket h2 { margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 10px; }
-.ticket-info { text-align: left; margin: 20px 0; font-size: 17px; line-height: 1.8; }
-#qrcode { display: flex; justify-content: center; margin: 15px 0; }
-
 .print-table-container { width: 100%; background: white; padding: 10px; box-sizing: border-box; }
 .print-list-table { width: 100%; border-collapse: collapse; }
 .print-list-table th, .print-list-table td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 15px; }
-.print-list-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
 .row-qr { display: flex; justify-content: center; margin-top: 5px; }
-.row-qr img { max-width: 65px; max-height: 65px; }
 
 @page { size: A4 portrait; margin: 15mm; }
 @media print {
