@@ -9,24 +9,31 @@
 <body>
     <div class="driver-panel">
         <h2>ระบบคนขับ (GPS)</h2>
+        
         <div id="login-section">
+            <p>กรุณาใส่รหัสผ่านเพื่อเริ่มงาน</p>
             <input type="password" id="password" placeholder="ใส่รหัสผ่านคนขับ">
             <button onclick="loginDriver()" class="btn-primary">เข้าสู่ระบบ</button>
         </div>
-        <div id="active-section" class="hidden">
-            <div id="setup-section">
-                <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ก-123)">
-                <input type="text" id="routeName" placeholder="สาย/เส้นทาง">
-                <button onclick="startSharing()" class="btn-success">เริ่มแชร์ตำแหน่ง</button>
-                <button onclick="logoutDriver()" class="btn-danger" style="background:#6c757d; margin-top:20px;">ออกจากระบบ</button>
+
+        <div id="setup-section" class="hidden">
+            <p>ระบุหมายเลขรถและสายการทำงาน</p>
+            <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ขก-001)">
+            <input type="text" id="routeName" placeholder="ชื่อสาย/เส้นทาง (เช่น สายตลาดสด)">
+            <button onclick="startSharing()" class="btn-success">เริ่มส่งพิกัดตำแหน่ง</button>
+            <button onclick="logoutDriver()" class="btn-danger" style="background:#6c757d; margin-top:20px;">ออกจากระบบ</button>
+        </div>
+
+        <div id="sharing-status" class="hidden">
+            <div style="background: #e9ecef; padding: 25px; border-radius: 12px; border: 2px solid #28a745;">
+                <h3 style="color: #28a745; margin: 0; display: flex; align-items: center; justify-content: center;">
+                    <span style="display:inline-block; width:12px; height:12px; background:#28a745; border-radius:50%; margin-right:10px; animation: pulse-green 1s infinite;"></span>
+                    กำลังส่งพิกัด GPS...
+                </h3>
+                <p id="truckDisplay" style="font-weight: bold; margin-top:15px; font-size: 18px;"></p>
+                <p style="font-size: 13px; color: #666;">ห้ามปิดหน้านี้หรือล็อคหน้าจอขณะทำงาน</p>
             </div>
-            <div id="sharing-status" class="hidden">
-                <div style="background: #e9ecef; padding: 20px; border-radius: 8px;">
-                    <h3 style="color: #28a745; margin: 0;">● กำลังส่งพิกัด...</h3>
-                    <p id="truckDisplay"></p>
-                </div>
-                <button onclick="location.reload()" class="btn-danger" style="margin-top: 20px;">หยุดการแชร์ตำแหน่ง</button>
-            </div>
+            <button onclick="stopSharing()" class="btn-danger" style="margin-top: 25px;">หยุดการส่งพิกัด (เลิกงาน)</button>
         </div>
     </div>
 
@@ -34,6 +41,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getDatabase, ref, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
+        // คอนฟิก Firebase (ห้ามเปลี่ยนค่านี้)
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -49,39 +57,87 @@
         const db = getDatabase(app);
         const truckRef = ref(db, 'truckLocation');
 
+        let watchId = null;
+
+        // เช็คสถานะการจดจำรหัสผ่านตอนโหลดหน้า
         window.onload = () => {
             if (localStorage.getItem('isDriverLoggedIn') === 'true') {
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('active-section').classList.remove('hidden');
+                showSetup();
             }
         };
 
+        // ฟังก์ชัน Login
         window.loginDriver = () => {
-            if(document.getElementById('password').value === "987654321") {
+            const pass = document.getElementById('password').value;
+            if(pass === "987654321") {
                 localStorage.setItem('isDriverLoggedIn', 'true');
-                location.reload();
-            } else { alert("รหัสผ่านไม่ถูกต้อง"); }
+                showSetup();
+            } else {
+                alert("รหัสผ่านไม่ถูกต้อง!");
+            }
         };
 
+        // ฟังก์ชัน Logout
         window.logoutDriver = () => {
             localStorage.removeItem('isDriverLoggedIn');
             location.reload();
         };
 
+        function showSetup() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('setup-section').classList.remove('hidden');
+            document.getElementById('sharing-status').classList.add('hidden');
+        }
+
+        // เริ่มส่งพิกัด
         window.startSharing = () => {
             const tNo = document.getElementById('truckNo').value;
             const rName = document.getElementById('routeName').value;
-            if(!tNo || !rName) { alert("กรอกข้อมูลให้ครบ"); return; }
+            
+            if(!tNo || !rName) {
+                alert("กรุณากรอกเบอร์รถและชื่อสายให้ครบถ้วน");
+                return;
+            }
+
             if (navigator.geolocation) {
                 document.getElementById('setup-section').classList.add('hidden');
                 document.getElementById('sharing-status').classList.remove('hidden');
-                document.getElementById('truckDisplay').innerText = `รถ: ${tNo} (${rName})`;
+                document.getElementById('truckDisplay').innerText = `รถ: ${tNo} | สาย: ${rName}`;
+
+                // ลบข้อมูลจากแผนที่อัตโนมัติหากเน็ตหลุดหรือปิดเบราว์เซอร์
                 onDisconnect(truckRef).remove();
-                navigator.geolocation.watchPosition((pos) => {
-                    set(truckRef, { lat: pos.coords.latitude, lng: pos.coords.longitude, truckNo: tNo, routeName: rName, timestamp: Date.now() });
-                }, null, { enableHighAccuracy: true });
-                if ('wakeLock' in navigator) navigator.wakeLock.request('screen');
+
+                // เริ่มติดตามพิกัด
+                watchId = navigator.geolocation.watchPosition((pos) => {
+                    set(truckRef, { 
+                        lat: pos.coords.latitude, 
+                        lng: pos.coords.longitude, 
+                        truckNo: tNo, 
+                        routeName: rName, 
+                        timestamp: Date.now() 
+                    });
+                }, (err) => {
+                    alert("ไม่สามารถเข้าถึง GPS ได้ กรุณาเปิด Location ในมือถือ");
+                }, { 
+                    enableHighAccuracy: true,
+                    maximumAge: 0 
+                });
+
+                // ป้องกันหน้าจอดับ (สำหรับมือถือรุ่นที่รองรับ)
+                if ('wakeLock' in navigator) {
+                    navigator.wakeLock.request('screen').catch(console.error);
+                }
+            } else {
+                alert("อุปกรณ์นี้ไม่รองรับระบบ GPS");
             }
+        };
+
+        // หยุดส่งพิกัด
+        window.stopSharing = () => {
+            if(watchId) navigator.geolocation.clearWatch(watchId);
+            remove(truckRef).then(() => {
+                location.reload(); // รีเฟรชกลับหน้าตั้งค่าใหม่
+            });
         };
     </script>
 </body>
