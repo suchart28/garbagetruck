@@ -5,57 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการหลังบ้าน (Admin)</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* บังคับซ่อนส่วน Dashboard ไว้ก่อนเสมอ */
+        #admin-login-section, #admin-dashboard { display: none; }
+        .visible { display: block !important; }
+    </style>
 </head>
 <body>
     <div class="admin-container">
-        
         <div id="admin-login-section" class="card" style="max-width: 400px; margin: 50px auto; text-align: center;">
             <h2>Admin Login</h2>
-            <p>กรุณาใส่รหัสผ่านผู้ดูแลระบบ</p>
             <input type="password" id="adminPass" placeholder="รหัสผ่าน Admin">
             <button onclick="loginAdmin()" class="btn-primary">เข้าสู่ระบบ</button>
         </div>
 
-        <div id="admin-dashboard" class="hidden">
+        <div id="admin-dashboard">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h1 style="margin:0;">แผงควบคุมระบบขยะ</h1>
+                <h1>แผงควบคุมระบบขยะ</h1>
                 <button onclick="logoutAdmin()" class="btn-danger" style="width: auto; padding: 8px 20px;">ออกจากระบบ</button>
             </div>
-
+            
             <div class="card">
-                <h3>สรุปภาพรวมวันนี้</h3>
                 <div class="stats-container">
-                    <div class="stat-box">
-                        <h4>งานแจ้งเหตุทั้งหมด</h4>
-                        <div id="total-count" class="count">0</div>
-                        <span>รายการ</span>
-                    </div>
-                    <div class="stat-box">
-                        <h4>รอดำเนินการ</h4>
-                        <div id="pending-count" class="count" style="color: #ff9800;">0</div>
-                        <span>รายการ</span>
-                    </div>
+                    <div class="stat-box"><h4>ทั้งหมด</h4><div id="total-count" class="count">0</div></div>
+                    <div class="stat-box"><h4>รอดำเนินการ</h4><div id="pending-count" class="count" style="color: #ff9800;">0</div></div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>รายการแจ้งขยะชิ้นใหญ่ / ขยะล้น (ล่าสุดอยู่บน)</h3>
-                <div style="overflow-x: auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>รหัสงาน</th>
-                                <th>ประเภท</th>
-                                <th>เบอร์ติดต่อ</th>
-                                <th>สถานะ</th>
-                                <th>นำทาง</th>
-                                <th>จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="report-list">
-                            </tbody>
-                    </table>
-                </div>
+                <table>
+                    <thead>
+                        <tr><th>รหัสงาน</th><th>ประเภท</th><th>เบอร์ติดต่อ</th><th>สถานะ</th><th>จัดการ</th></tr>
+                    </thead>
+                    <tbody id="report-list"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -78,21 +61,25 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // ตรวจสอบสถานะการ Login
-        window.onload = () => {
-            if (localStorage.getItem('isAdminLoggedIn') === 'true') {
-                showDashboard();
+        function checkAuth() {
+            const isAdmin = localStorage.getItem('isAdminLoggedIn');
+            document.getElementById('admin-login-section').classList.remove('visible');
+            document.getElementById('admin-dashboard').classList.remove('visible');
+
+            if (isAdmin === 'true') {
+                document.getElementById('admin-dashboard').classList.add('visible');
+                loadReports();
+            } else {
+                document.getElementById('admin-login-section').classList.add('visible');
             }
-        };
+        }
+        checkAuth();
 
         window.loginAdmin = () => {
-            const pass = document.getElementById('adminPass').value;
-            if (pass === "admin1234") { // ตั้งรหัส Admin ของคุณที่นี่
+            if (document.getElementById('adminPass').value === "admin1234") {
                 localStorage.setItem('isAdminLoggedIn', 'true');
-                showDashboard();
-            } else {
-                alert("รหัสผ่านไม่ถูกต้อง!");
-            }
+                checkAuth();
+            } else { alert("รหัสผ่านไม่ถูกต้อง"); }
         };
 
         window.logoutAdmin = () => {
@@ -100,62 +87,27 @@
             location.reload();
         };
 
-        function showDashboard() {
-            document.getElementById('admin-login-section').classList.add('hidden');
-            document.getElementById('admin-dashboard').classList.remove('hidden');
-            loadReports();
-        }
-
         function loadReports() {
             onValue(ref(db, 'reports'), (snapshot) => {
                 const list = document.getElementById('report-list');
                 list.innerHTML = "";
-                let total = 0, pending = 0;
-
                 if (snapshot.exists()) {
                     const data = [];
-                    snapshot.forEach((child) => {
-                        data.push({ key: child.key, ...child.val() });
-                    });
-
-                    // เรียงลำดับงานล่าสุดขึ้นก่อน (Timestamp ล่าสุดอยู่บน)
-                    data.sort((a, b) => b.timestamp - a.timestamp);
-
-                    data.forEach((item) => {
-                        total++;
-                        if (item.status === 'pending') pending++;
-
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td><b>${item.reportId || '-'}</b></td>
+                    snapshot.forEach(c => data.push({key: c.key, ...c.val()}));
+                    data.sort((a,b) => b.timestamp - a.timestamp).forEach(item => {
+                        const row = `<tr>
+                            <td>${item.reportId}</td>
                             <td>${item.type}</td>
-                            <td><a href="tel:${item.phone}">${item.phone}</a></td>
-                            <td><span class="status-badge ${item.status === 'pending' ? 'status-pending' : 'status-process'}">${item.status === 'pending' ? 'รอดำเนินการ' : 'รับงานแล้ว'}</span></td>
-                            <td>
-                                <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank" class="btn-print" style="background:#4285F4; text-decoration:none; font-size:12px;">📍 แผนที่</a>
-                            </td>
-                            <td>
-                                ${item.status === 'pending' ? `<button onclick="updateStatus('${item.key}', 'processing')" class="btn-success" style="font-size:11px; padding:5px;">รับงาน</button>` : ''}
-                                <button onclick="deleteReport('${item.key}')" class="btn-danger" style="font-size:11px; padding:5px; width:auto;">ลบ</button>
-                            </td>
-                        `;
-                        list.appendChild(row);
+                            <td>${item.phone}</td>
+                            <td>${item.status}</td>
+                            <td><button onclick="deleteReport('${item.key}')" class="btn-danger">ลบ</button></td>
+                        </tr>`;
+                        list.innerHTML += row;
                     });
                 }
-                document.getElementById('total-count').innerText = total;
-                document.getElementById('pending-count').innerText = pending;
             });
         }
-
-        window.updateStatus = (key, newStatus) => {
-            update(ref(db, `reports/${key}`), { status: newStatus });
-        };
-
-        window.deleteReport = (key) => {
-            if (confirm("ยืนยันการลบรายการนี้?")) {
-                remove(ref(db, `reports/${key}`));
-            }
-        };
+        window.deleteReport = (key) => remove(ref(db, `reports/${key}`));
     </script>
 </body>
 </html>
