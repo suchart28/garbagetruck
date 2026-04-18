@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ติดตามรถเก็บขยะ (Public)</title>
+    <title>ติดตามรถเก็บขยะนครขอนแก่น</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
@@ -13,20 +13,20 @@
         <div id="distance-info">กำลังหาพิกัด...</div>
     </div>
     
-    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()" title="เปิด/ปิด เสียงเตือน">🔇</button>
+    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()">🔇</button>
 
     <div id="map"></div>
     
     <div class="report-btn-container">
-        <button class="btn-report" onclick="openModal()">⚠️ แจ้งปัญหาขยะ</button>
+        <button class="btn-report" onclick="openModal()">⚠️ แจ้งขยะชิ้นใหญ่ / ขยะล้น</button>
     </div>
     
     <div id="reportModal" class="modal">
         <div class="modal-content">
             <h3 style="margin-top:0">แจ้งปัญหาขยะ</h3>
-            <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ">
-            <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary">ขยะชิ้นใหญ่</button>
-            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800;">ขยะล้นถัง</button>
+            <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ (จำเป็น)">
+            <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary">ขยะชิ้นใหญ่ (เฟอร์นิเจอร์/ที่นอน)</button>
+            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800;">ขยะล้นถัง / จุดพักขยะเต็ม</button>
             <button onclick="closeModal()" class="btn-danger">ยกเลิก</button>
         </div>
     </div>
@@ -36,7 +36,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getDatabase, ref, onValue, push, set, get } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-        // คอนฟิก Firebase ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -69,21 +68,32 @@
             const d = snapshot.val();
             if (d) {
                 const pos = [d.lat, d.lng];
-                const html = `<div class="truck-icon-container">
-                                <div class="truck-label">${d.truckNo}</div>
-                                <div class="truck-icon truck-moving"></div>
-                              </div>`;
-                if (!truckMarker) truckMarker = L.marker(pos, { icon: L.divIcon({ className: '', html, iconSize: [100, 50], iconAnchor: [50, 38] }) }).addTo(map);
-                else { truckMarker.setLatLng(pos); truckMarker.setIcon(L.divIcon({ className: '', html, iconSize: [100, 50], iconAnchor: [50, 38] })); }
+                const html = `
+                    <div class="truck-icon-container">
+                        <div class="truck-label-box">
+                            <div class="truck-id-label">เบอร์รถ: ${d.truckNo}</div>
+                            <div class="truck-route-label">🚚 ${d.routeName}</div>
+                        </div>
+                        <div class="truck-icon truck-moving"></div>
+                    </div>`;
+                
+                const customIcon = L.divIcon({ className: '', html: html, iconSize: [120, 80], iconAnchor: [60, 75] });
+
+                if (!truckMarker) truckMarker = L.marker(pos, { icon: customIcon }).addTo(map);
+                else { truckMarker.setLatLng(pos); truckMarker.setIcon(customIcon); }
                 
                 if(userLatLng) {
                     const dist = map.distance(userLatLng, pos);
                     document.getElementById('distance-info').innerText = dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' เมตร';
+                    
                     if (dist <= 200 && isAudioEnabled && !hasAlerted200m) {
                         speakText("รถเก็บขยะเทศบาลนครขอนแก่นกำลังมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อมค่ะ");
                         hasAlerted200m = true; 
                     } else if (dist > 300) { hasAlerted200m = false; }
                 }
+            } else {
+                document.getElementById('distance-info').innerText = "รถยังไม่ออกปฏิบัติงาน";
+                if(truckMarker) { map.removeLayer(truckMarker); truckMarker = null; }
             }
         });
 
@@ -96,11 +106,11 @@
         }
 
         window.toggleAudio = () => {
-            const btn = document.getElementById('audioToggleBtn');
             isAudioEnabled = !isAudioEnabled;
+            const btn = document.getElementById('audioToggleBtn');
             if (isAudioEnabled) {
                 btn.innerHTML = "🔊"; btn.classList.add('active');
-                speakText("เปิดระบบเสียงเตือนแล้ว");
+                speakText("เปิดระบบเสียงเตือนรถขยะแล้วค่ะ");
             } else {
                 btn.innerHTML = "🔇"; btn.classList.remove('active');
                 hasAlerted200m = false;
@@ -110,11 +120,29 @@
         window.sendReport = async (type) => {
             const phone = document.getElementById('reporterPhone').value;
             if(!phone || !userLatLng) { alert("ข้อมูลไม่ครบ"); return; }
+            
             const now = new Date();
-            const rId = `D${String(now.getDate()).padStart(2,'0')}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getFullYear()+543).slice(-2)}-${Date.now().toString().slice(-3)}`;
-            set(push(ref(db, 'reports')), { reportId: rId, type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: now.getTime(), status: 'pending' })
-            .then(() => { alert("แจ้งเหตุสำเร็จ รหัส: " + rId); closeModal(); });
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yy = String(now.getFullYear() + 543).slice(-2);
+            const datePrefix = `D${dd}${mm}${yy}-`;
+
+            const snapshot = await get(ref(db, 'reports'));
+            let currentMax = 0;
+            if (snapshot.exists()) {
+                Object.values(snapshot.val()).forEach(r => {
+                    if (r.reportId && r.reportId.startsWith(datePrefix)) {
+                        const runNum = parseInt(r.reportId.split('-')[1]);
+                        if (runNum > currentMax) currentMax = runNum;
+                    }
+                });
+            }
+            const newId = datePrefix + (currentMax + 1);
+            
+            set(push(ref(db, 'reports')), { reportId: newId, type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: now.getTime(), status: 'pending' })
+            .then(() => { alert(`แจ้งเหตุสำเร็จ! รหัสงานคือ: ${newId}`); closeModal(); });
         };
+
         window.openModal = () => document.getElementById('reportModal').style.display = 'flex';
         window.closeModal = () => document.getElementById('reportModal').style.display = 'none';
     </script>
