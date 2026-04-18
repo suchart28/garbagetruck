@@ -13,7 +13,7 @@
         <div id="distance-info">กำลังหาพิกัด...</div>
     </div>
     
-    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()">🔕 เสียงเตือน: ปิด</button>
+    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()" title="เปิด/ปิด แจ้งเตือนเสียง">🔕</button>
 
     <div id="map"></div>
     
@@ -55,9 +55,8 @@
         let userLatLng = null, truckMarker = null, userMarker = null;
         const userIcon = L.divIcon({ className: 'user-icon pulse-red', iconSize: [16, 16], iconAnchor: [8, 8], html: '' });
 
-        // ตัวแปรควบคุมระบบเสียง
         let isAudioEnabled = false;
-        let hasAlerted200m = false; // ป้องกันการพูดซ้ำรัวๆ
+        let hasAlerted200m = false;
 
         map.locate({setView: true, maxZoom: 16, watch: true});
         map.on('locationfound', (e) => {
@@ -80,17 +79,14 @@
                 if (!truckMarker) truckMarker = L.marker(pos, { icon: L.divIcon(iconOptions) }).addTo(map);
                 else { truckMarker.setLatLng(pos); truckMarker.setIcon(L.divIcon(iconOptions)); }
                 
-                // คำนวณระยะห่างและแจ้งเตือน
                 if(userLatLng) {
                     const dist = map.distance(userLatLng, pos);
                     document.getElementById('distance-info').innerHTML = `ระยะห่าง: <b>${dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' ม.'}</b>`;
 
-                    // เงื่อนไขแจ้งเตือนเสียง: ถ้ารถอยู่ห่างไม่เกิน 200 เมตร และเปิดเสียงไว้ และยังไม่ได้เตือน
                     if (dist <= 200 && isAudioEnabled && !hasAlerted200m) {
                         speakText("รถเก็บขยะเทศบาลนครขอนแก่นกำลังมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อมค่ะ");
-                        hasAlerted200m = true; // ล็อคไว้ไม่ให้พูดซ้ำ
+                        hasAlerted200m = true; 
                     } 
-                    // ถ้ารถวิ่งออกห่างไปเกิน 300 เมตร ให้รีเซ็ตระบบเตือนใหม่ (เผื่อรถวนกลับมา)
                     else if (dist > 300) {
                         hasAlerted200m = false;
                     }
@@ -101,29 +97,27 @@
             }
         });
 
-        // ฟังก์ชันอ่านออกเสียงภาษาไทย
         function speakText(text) {
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'th-TH'; // ตั้งค่าเป็นเสียงภาษาไทย
-                utterance.rate = 0.85; // ปรับความเร็วเสียงให้ช้าลงเล็กน้อยเพื่อให้ฟังชัดเจน
+                utterance.lang = 'th-TH'; 
+                utterance.rate = 0.85; 
                 window.speechSynthesis.speak(utterance);
             }
         }
 
-        // ฟังก์ชันเปิด-ปิดเสียงเมื่อกดปุ่ม
+        // อัปเดตการทำงานปุ่มให้สลับเฉพาะไอคอน
         window.toggleAudio = () => {
             const btn = document.getElementById('audioToggleBtn');
             if (!isAudioEnabled) {
                 isAudioEnabled = true;
-                btn.innerText = "🔔 เสียงเตือน: เปิดแล้ว";
+                btn.innerHTML = "🔔"; // เปิดเสียง (กระดิ่งดัง)
                 btn.classList.add('active');
-                // สั่งให้พูด 1 ครั้งเพื่อให้เบราว์เซอร์รับรู้ว่าผู้ใช้กดอนุญาตให้เล่นเสียงแล้ว
-                speakText("เปิดระบบเสียงเตือนรถขยะเรียบร้อยแล้วค่ะ");
+                speakText("เปิดระบบเสียงเตือนเรียบร้อยแล้วค่ะ");
             } else {
                 isAudioEnabled = false;
-                hasAlerted200m = false; // รีเซ็ตการเตือน
-                btn.innerText = "🔕 เสียงเตือน: ปิด";
+                hasAlerted200m = false; 
+                btn.innerHTML = "🔕"; // ปิดเสียง (กระดิ่งกากบาท)
                 btn.classList.remove('active');
             }
         };
