@@ -30,28 +30,31 @@ th { background: #f8f9fa; }
     box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; min-width: 250px;
 }
 
-/* --- อัปเดต: ปุ่มระบบเสียง (กลางจอ ชิดขอบซ้าย ไอคอนเท่านั้น) --- */
+/* --- อัปเดต: ปุ่มระบบเสียง (ไอคอนลำโพง มุมขวาบนเพื่อหลบปุ่ม Zoom แผนที่) --- */
 .btn-audio {
     position: absolute; 
-    top: 50%; 
-    left: 15px; 
-    transform: translateY(-50%);
+    top: 20px; 
+    right: 20px; 
     z-index: 1000;
-    background: #dc3545; 
-    color: white; 
-    border: none; 
-    width: 55px; 
-    height: 55px;
+    background: white; 
+    color: #555; 
+    border: 2px solid #ddd; 
+    width: 46px; 
+    height: 46px;
     border-radius: 50%; 
-    font-size: 26px; /* ขนาดไอคอนใหญ่ขึ้นให้กดง่าย */
+    font-size: 20px; 
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
     transition: 0.3s;
     display: flex;
     justify-content: center;
     align-items: center;
 }
-.btn-audio.active { background: #28a745; }
+.btn-audio.active { 
+    background: #28a745; 
+    color: white;
+    border-color: #28a745;
+}
 /* ----------------------------------------------------------- */
 
 /* ปุ่มแจ้งเหตุ */
