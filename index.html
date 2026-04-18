@@ -13,7 +13,7 @@
         <div id="distance-info">กำลังหาพิกัด...</div>
     </div>
     
-    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()" title="เปิด/ปิด แจ้งเตือนเสียง">🔕</button>
+    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()" title="เปิด/ปิด แจ้งเตือนเสียง">🔇</button>
 
     <div id="map"></div>
     
@@ -50,6 +50,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const map = L.map('map').setView([16.4322, 102.8236], 13);
+        
+        // ลบ Zoom Control แบบเก่าออก (ถ้ามี) หรือย้ายมาขวาได้ถ้าต้องการ แต่ค่าเริ่มต้นอยู่ซ้ายบนอยู่แล้ว
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         let userLatLng = null, truckMarker = null, userMarker = null;
@@ -106,18 +108,18 @@
             }
         }
 
-        // อัปเดตการทำงานปุ่มให้สลับเฉพาะไอคอน
+        // ฟังก์ชันสลับไอคอนลำโพง
         window.toggleAudio = () => {
             const btn = document.getElementById('audioToggleBtn');
             if (!isAudioEnabled) {
                 isAudioEnabled = true;
-                btn.innerHTML = "🔔"; // เปิดเสียง (กระดิ่งดัง)
+                btn.innerHTML = "🔊"; // ลำโพงมีเสียง (เปิด)
                 btn.classList.add('active');
                 speakText("เปิดระบบเสียงเตือนเรียบร้อยแล้วค่ะ");
             } else {
                 isAudioEnabled = false;
                 hasAlerted200m = false; 
-                btn.innerHTML = "🔕"; // ปิดเสียง (กระดิ่งกากบาท)
+                btn.innerHTML = "🔇"; // ลำโพงปิดเสียง
                 btn.classList.remove('active');
             }
         };
