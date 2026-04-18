@@ -25,8 +25,8 @@
         <div class="modal-content">
             <h3 style="margin-top:0">แจ้งปัญหาขยะ</h3>
             <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ (จำเป็น)">
-            <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary">ขยะชิ้นใหญ่ (เฟอร์นิเจอร์/ที่นอน)</button>
-            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800;">ขยะล้นถัง / จุดพักขยะเต็ม</button>
+            <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary">ขยะชิ้นใหญ่</button>
+            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800;">ขยะล้นถัง</button>
             <button onclick="closeModal()" class="btn-danger">ยกเลิก</button>
         </div>
     </div>
@@ -53,8 +53,7 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         let userLatLng = null, truckMarker = null, userMarker = null;
-        let isAudioEnabled = false;
-        let hasAlerted200m = false;
+        let isAudioEnabled = false, hasAlerted200m = false;
 
         map.locate({setView: true, maxZoom: 16, watch: true});
         map.on('locationfound', (e) => {
@@ -71,13 +70,13 @@
                 const html = `
                     <div class="truck-icon-container">
                         <div class="truck-label-box">
-                            <div class="truck-id-label">เบอร์รถ: ${d.truckNo}</div>
-                            <div class="truck-route-label">🚚 ${d.routeName}</div>
+                            <span class="truck-id-label">เบอร์รถ: ${d.truckNo}</span>
+                            <span class="truck-route-label">${d.routeName}</span>
                         </div>
                         <div class="truck-icon truck-moving"></div>
                     </div>`;
                 
-                const customIcon = L.divIcon({ className: '', html: html, iconSize: [120, 80], iconAnchor: [60, 75] });
+                const customIcon = L.divIcon({ className: '', html: html, iconSize: [120, 85], iconAnchor: [60, 80] });
 
                 if (!truckMarker) truckMarker = L.marker(pos, { icon: customIcon }).addTo(map);
                 else { truckMarker.setLatLng(pos); truckMarker.setIcon(customIcon); }
@@ -108,25 +107,16 @@
         window.toggleAudio = () => {
             isAudioEnabled = !isAudioEnabled;
             const btn = document.getElementById('audioToggleBtn');
-            if (isAudioEnabled) {
-                btn.innerHTML = "🔊"; btn.classList.add('active');
-                speakText("เปิดระบบเสียงเตือนรถขยะแล้วค่ะ");
-            } else {
-                btn.innerHTML = "🔇"; btn.classList.remove('active');
-                hasAlerted200m = false;
-            }
+            if (isAudioEnabled) { btn.innerHTML = "🔊"; btn.classList.add('active'); speakText("เปิดระบบเสียงเตือนแล้ว"); }
+            else { btn.innerHTML = "🔇"; btn.classList.remove('active'); hasAlerted200m = false; }
         };
 
         window.sendReport = async (type) => {
             const phone = document.getElementById('reporterPhone').value;
             if(!phone || !userLatLng) { alert("ข้อมูลไม่ครบ"); return; }
-            
             const now = new Date();
-            const dd = String(now.getDate()).padStart(2, '0');
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const yy = String(now.getFullYear() + 543).slice(-2);
+            const dd = String(now.getDate()).padStart(2, '0'), mm = String(now.getMonth() + 1).padStart(2, '0'), yy = String(now.getFullYear() + 543).slice(-2);
             const datePrefix = `D${dd}${mm}${yy}-`;
-
             const snapshot = await get(ref(db, 'reports'));
             let currentMax = 0;
             if (snapshot.exists()) {
@@ -138,9 +128,8 @@
                 });
             }
             const newId = datePrefix + (currentMax + 1);
-            
             set(push(ref(db, 'reports')), { reportId: newId, type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: now.getTime(), status: 'pending' })
-            .then(() => { alert(`แจ้งเหตุสำเร็จ! รหัสงานคือ: ${newId}`); closeModal(); });
+            .then(() => { alert(`แจ้งเหตุสำเร็จ! รหัสงาน: ${newId}`); closeModal(); });
         };
 
         window.openModal = () => document.getElementById('reportModal').style.display = 'flex';
