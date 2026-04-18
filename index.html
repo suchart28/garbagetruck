@@ -9,11 +9,11 @@
 </head>
 <body>
     <div class="info-box">
-        <h3 style="margin:0;">รถเก็บขยะเทศบาล</h3>
+        <h3>รถเก็บขยะห่างจากคุณ</h3>
         <div id="distance-info">กำลังหาพิกัด...</div>
     </div>
     
-    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()" title="เปิด/ปิด แจ้งเตือนเสียง">🔇</button>
+    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()" title="เปิด/ปิด เสียงเตือน">🔇</button>
 
     <div id="map"></div>
     
@@ -23,8 +23,8 @@
     
     <div id="reportModal" class="modal">
         <div class="modal-content">
-            <h3>แจ้งปัญหาขยะ</h3>
-            <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ (จำเป็น)">
+            <h3 style="margin-top:0">แจ้งปัญหาขยะ</h3>
+            <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ">
             <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary">ขยะชิ้นใหญ่</button>
             <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800;">ขยะล้นถัง</button>
             <button onclick="closeModal()" class="btn-danger">ยกเลิก</button>
@@ -36,6 +36,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
         import { getDatabase, ref, onValue, push, set, get } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
+        // คอนฟิก Firebase ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -49,20 +50,17 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const map = L.map('map').setView([16.4322, 102.8236], 13);
-        
-        // ลบ Zoom Control แบบเก่าออก (ถ้ามี) หรือย้ายมาขวาได้ถ้าต้องการ แต่ค่าเริ่มต้นอยู่ซ้ายบนอยู่แล้ว
+        const map = L.map('map', { zoomControl: false }).setView([16.4322, 102.8236], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         let userLatLng = null, truckMarker = null, userMarker = null;
-        const userIcon = L.divIcon({ className: 'user-icon pulse-red', iconSize: [16, 16], iconAnchor: [8, 8], html: '' });
-
         let isAudioEnabled = false;
         let hasAlerted200m = false;
 
         map.locate({setView: true, maxZoom: 16, watch: true});
         map.on('locationfound', (e) => {
             userLatLng = e.latlng;
+            const userIcon = L.divIcon({ className: 'user-icon pulse-red', iconSize: [16, 16], iconAnchor: [8, 8] });
             if(!userMarker) userMarker = L.marker(userLatLng, { icon: userIcon }).addTo(map);
             else userMarker.setLatLng(userLatLng);
         });
@@ -71,87 +69,52 @@
             const d = snapshot.val();
             if (d) {
                 const pos = [d.lat, d.lng];
-                const labelText = `${d.truckNo} (${d.routeName})`;
                 const html = `<div class="truck-icon-container">
-                                <div class="truck-label">${labelText}</div>
+                                <div class="truck-label">${d.truckNo}</div>
                                 <div class="truck-icon truck-moving"></div>
                               </div>`;
-                const iconOptions = { className: '', html: html, iconSize: [100, 50], iconAnchor: [50, 38] };
-
-                if (!truckMarker) truckMarker = L.marker(pos, { icon: L.divIcon(iconOptions) }).addTo(map);
-                else { truckMarker.setLatLng(pos); truckMarker.setIcon(L.divIcon(iconOptions)); }
+                if (!truckMarker) truckMarker = L.marker(pos, { icon: L.divIcon({ className: '', html, iconSize: [100, 50], iconAnchor: [50, 38] }) }).addTo(map);
+                else { truckMarker.setLatLng(pos); truckMarker.setIcon(L.divIcon({ className: '', html, iconSize: [100, 50], iconAnchor: [50, 38] })); }
                 
                 if(userLatLng) {
                     const dist = map.distance(userLatLng, pos);
-                    document.getElementById('distance-info').innerHTML = `ระยะห่าง: <b>${dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' ม.'}</b>`;
-
+                    document.getElementById('distance-info').innerText = dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' เมตร';
                     if (dist <= 200 && isAudioEnabled && !hasAlerted200m) {
                         speakText("รถเก็บขยะเทศบาลนครขอนแก่นกำลังมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อมค่ะ");
                         hasAlerted200m = true; 
-                    } 
-                    else if (dist > 300) {
-                        hasAlerted200m = false;
-                    }
+                    } else if (dist > 300) { hasAlerted200m = false; }
                 }
-            } else { 
-                document.getElementById('distance-info').innerText = "ไม่มีรถปฏิบัติงาน"; 
-                if(truckMarker){ map.removeLayer(truckMarker); truckMarker=null; } 
             }
         });
 
         function speakText(text) {
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'th-TH'; 
-                utterance.rate = 0.85; 
+                utterance.lang = 'th-TH'; utterance.rate = 0.9;
                 window.speechSynthesis.speak(utterance);
             }
         }
 
-        // ฟังก์ชันสลับไอคอนลำโพง
         window.toggleAudio = () => {
             const btn = document.getElementById('audioToggleBtn');
-            if (!isAudioEnabled) {
-                isAudioEnabled = true;
-                btn.innerHTML = "🔊"; // ลำโพงมีเสียง (เปิด)
-                btn.classList.add('active');
-                speakText("เปิดระบบเสียงเตือนเรียบร้อยแล้วค่ะ");
+            isAudioEnabled = !isAudioEnabled;
+            if (isAudioEnabled) {
+                btn.innerHTML = "🔊"; btn.classList.add('active');
+                speakText("เปิดระบบเสียงเตือนแล้ว");
             } else {
-                isAudioEnabled = false;
-                hasAlerted200m = false; 
-                btn.innerHTML = "🔇"; // ลำโพงปิดเสียง
-                btn.classList.remove('active');
+                btn.innerHTML = "🔇"; btn.classList.remove('active');
+                hasAlerted200m = false;
             }
         };
 
         window.sendReport = async (type) => {
             const phone = document.getElementById('reporterPhone').value;
-            if(!phone || !userLatLng) { alert("กรุณาระบุเบอร์โทรและรอระบุตำแหน่ง"); return; }
-            try {
-                const now = new Date();
-                const dd = String(now.getDate()).padStart(2, '0');
-                const mm = String(now.getMonth() + 1).padStart(2, '0');
-                const yy = String(now.getFullYear() + 543).slice(-2);
-                const datePrefix = `D${dd}${mm}${yy}-`;
-
-                const snapshot = await get(ref(db, 'reports'));
-                let currentMax = 0;
-                if (snapshot.exists()) {
-                    Object.values(snapshot.val()).forEach(report => {
-                        if (report.reportId && report.reportId.startsWith(datePrefix)) {
-                            const runNum = parseInt(report.reportId.split('-')[1]);
-                            if (runNum > currentMax) currentMax = runNum;
-                        }
-                    });
-                }
-                const newReportId = datePrefix + (currentMax + 1);
-                const newRef = push(ref(db, 'reports'));
-                await set(newRef, { reportId: newReportId, type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: now.getTime(), status: 'pending' });
-                alert(`แจ้งเหตุสำเร็จ! รหัสอ้างอิงของคุณคือ: ${newReportId}`); 
-                closeModal();
-            } catch (error) { alert("เกิดข้อผิดพลาด กรุณาลองใหม่"); }
+            if(!phone || !userLatLng) { alert("ข้อมูลไม่ครบ"); return; }
+            const now = new Date();
+            const rId = `D${String(now.getDate()).padStart(2,'0')}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getFullYear()+543).slice(-2)}-${Date.now().toString().slice(-3)}`;
+            set(push(ref(db, 'reports')), { reportId: rId, type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: now.getTime(), status: 'pending' })
+            .then(() => { alert("แจ้งเหตุสำเร็จ รหัส: " + rId); closeModal(); });
         };
-
         window.openModal = () => document.getElementById('reportModal').style.display = 'flex';
         window.closeModal = () => document.getElementById('reportModal').style.display = 'none';
     </script>
