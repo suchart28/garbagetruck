@@ -87,7 +87,7 @@
                     document.getElementById('distance-info').innerText = dist > 1000 ? (dist/1000).toFixed(2)+' กม.' : Math.round(dist)+' เมตร';
                     
                     if (dist <= 200 && isAudioEnabled && !hasAlerted200m) {
-                        speakText("รถเก็บขยะเทศบาลนครขอนแก่นกำลังจะมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อม ขอบคุณครับ");
+                        speakText("รถเก็บขยะเทศบาลกำลังจะมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อม ขอบคุณจ้า");
                         hasAlerted200m = true; 
                     } else if (dist > 300) { 
                         // ถ้ารถถอยห่างเกิน 300 เมตร ให้รีเซ็ตสถานะเพื่อเตือนใหม่ถ้าขยับเข้ามาอีกครั้ง
