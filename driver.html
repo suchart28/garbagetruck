@@ -2,43 +2,147 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบคนขับรถเก็บขยะ (GPS)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>แอปคนขับรถขยะ</title>
     <link rel="stylesheet" href="style.css">
     <style>
         /* บังคับซ่อนทุกส่วนไว้ก่อนเพื่อความปลอดภัย */
         #login-section, #setup-section, #sharing-status { display: none; }
         .visible { display: block !important; }
-        .flex-visible { display: flex !important; }
+
+        /* --- ปรับแต่ง UX/UI เฉพาะหน้าคนขับ (Mobile First) --- */
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f2f5;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .driver-panel {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 25px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: #ffffff;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .driver-panel h2 {
+            font-size: 28px;
+            color: #111;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .driver-panel p {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        /* ช่องกรอกข้อมูลขนาดใหญ่ */
+        .driver-input {
+            width: 100%;
+            padding: 18px 15px;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 16px;
+            font-size: 20px;
+            font-family: 'Chakra Petch', sans-serif;
+            box-sizing: border-box;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        .driver-input:focus {
+            border-color: #007bff;
+            outline: none;
+            background-color: #f8fbff;
+        }
+
+        /* ปุ่มกดขนาดใหญ่ */
+        .driver-btn {
+            width: 100%;
+            padding: 20px;
+            border: none;
+            border-radius: 16px;
+            font-size: 22px;
+            font-weight: bold;
+            font-family: 'Chakra Petch', sans-serif;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .driver-btn:active { transform: scale(0.96); }
+        .btn-login { background: #007bff; color: white; }
+        .btn-start { background: #28a745; color: white; }
+        .btn-stop { background: #dc3545; color: white; margin-top: 30px; }
+        .btn-logout { background: #6c757d; color: white; margin-top: 10px; font-size: 18px; padding: 15px; }
+
+        /* ไฟสถานะกระพริบขนาดใหญ่ */
+        .status-indicator {
+            display: inline-block;
+            width: 100px;
+            height: 100px;
+            background-color: #28a745;
+            border-radius: 50%;
+            margin: 20px auto 30px auto;
+            border: 5px solid white;
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+            animation: pulse-big 1.5s infinite;
+        }
+
+        @keyframes pulse-big {
+            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { box-shadow: 0 0 0 35px rgba(40, 167, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+
+        .info-text { font-size: 24px; font-weight: bold; color: #333; margin: 10px 0; }
+        .info-sub { font-size: 18px; color: #555; }
     </style>
 </head>
 <body>
     <div class="driver-panel">
-        <h2>ระบบคนขับ (GPS)</h2>
         
         <div id="login-section">
+            <h2>🚚 ระบบคนขับรถขยะ</h2>
             <p>กรุณาใส่รหัสผ่านเพื่อเริ่มงาน</p>
-            <input type="password" id="password" placeholder="ใส่รหัสผ่านคนขับ">
-            <button onclick="loginDriver()" class="btn-primary">เข้าสู่ระบบ</button>
+            <input type="password" id="password" class="driver-input" placeholder="ใส่รหัสผ่านคนขับ">
+            <button onclick="loginDriver()" class="driver-btn btn-login">เข้าสู่ระบบ</button>
         </div>
 
         <div id="setup-section">
-            <p>ระบุหมายเลขรถและสายการทำงาน</p>
-            <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ขก-001)">
-            <input type="text" id="routeName" placeholder="ชื่อสาย/เส้นทาง (เช่น สายตลาดสด)">
-            <button onclick="startSharing()" class="btn-success">เริ่มส่งพิกัดตำแหน่ง</button>
-            <button onclick="logoutDriver()" class="btn-danger" style="background:#6c757d; margin-top:20px;">ออกจากระบบ</button>
+            <h2>📍 ระบุข้อมูลรถ</h2>
+            <p>กรอกเบอร์รถและสายการทำงานของวันนี้</p>
+            <input type="text" id="truckNo" class="driver-input" placeholder="เบอร์รถ (เช่น 01)">
+            <input type="text" id="routeName" class="driver-input" placeholder="ชื่อสาย (เช่น สายตลาด)">
+            
+            <button onclick="startSharing()" class="driver-btn btn-start">▶ เริ่มส่งพิกัดตำแหน่ง</button>
+            <button onclick="logoutDriver()" class="driver-btn btn-logout">ออกจากระบบ</button>
         </div>
 
         <div id="sharing-status">
-            <div style="background: #e9ecef; padding: 25px; border-radius: 12px; border: 2px solid #28a745;">
-                <h3 style="color: #28a745; margin: 0; display: flex; align-items: center; justify-content: center;">
-                    กำลังส่งพิกัด GPS...
-                </h3>
-                <p id="truckDisplay" style="font-weight: bold; margin-top:15px; font-size: 18px;"></p>
-            </div>
-            <button onclick="stopSharing()" class="btn-danger" style="margin-top: 25px;">หยุดการส่งพิกัด (เลิกงาน)</button>
+            <h2>📡 กำลังทำงาน</h2>
+            <p>ระบบกำลังส่งพิกัดของคุณไปยังแผนที่</p>
+            
+            <div class="status-indicator"></div>
+            
+            <div class="info-text" id="displayTruckNo">รถ: -</div>
+            <div class="info-sub" id="displayRouteName">สาย: -</div>
+
+            <button onclick="stopSharing()" class="driver-btn btn-stop">⏹ เลิกงาน (หยุดส่งพิกัด)</button>
         </div>
+
     </div>
 
     <script type="module">
@@ -58,12 +162,11 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const truckRef = ref(db, 'truckLocation');
         let watchId = null;
 
-        // ตรวจสอบสถานะทันทีที่โหลดหน้า
         function checkAuth() {
             const isLoggedIn = localStorage.getItem('isDriverLoggedIn');
-            // ล้าง UI ทั้งหมดก่อน
             document.getElementById('login-section').classList.remove('visible');
             document.getElementById('setup-section').classList.remove('visible');
             
@@ -76,12 +179,11 @@
         checkAuth();
 
         window.loginDriver = () => {
-            const pass = document.getElementById('password').value;
-            if(pass === "987654321") {
+            if(document.getElementById('password').value === "987654321") {
                 localStorage.setItem('isDriverLoggedIn', 'true');
                 checkAuth();
-            } else {
-                alert("รหัสผ่านไม่ถูกต้อง!");
+            } else { 
+                alert("รหัสผ่านไม่ถูกต้อง!"); 
             }
         };
 
@@ -93,24 +195,50 @@
         window.startSharing = () => {
             const tNo = document.getElementById('truckNo').value;
             const rName = document.getElementById('routeName').value;
-            if(!tNo || !rName) { alert("กรุณากรอกข้อมูลให้ครบ"); return; }
+            
+            if(!tNo || !rName) { 
+                alert("กรุณากรอกข้อมูลให้ครบก่อนเริ่มงานครับ"); 
+                return; 
+            }
 
             document.getElementById('setup-section').classList.remove('visible');
             document.getElementById('sharing-status').classList.add('visible');
-            document.getElementById('truckDisplay').innerText = `รถ: ${tNo} | สาย: ${rName}`;
+            
+            document.getElementById('displayTruckNo').innerText = `รถ: ${tNo}`;
+            document.getElementById('displayRouteName').innerText = `สาย: ${rName}`;
 
-            watchId = navigator.geolocation.watchPosition((pos) => {
-                set(ref(db, 'truckLocation'), { 
-                    lat: pos.coords.latitude, lng: pos.coords.longitude, 
-                    truckNo: tNo, routeName: rName, timestamp: Date.now() 
+            // ลบตำแหน่งอัตโนมัติหากเน็ตหลุด/ปิดแอป
+            onDisconnect(truckRef).remove();
+
+            // เริ่มอ่านพิกัด
+            if (navigator.geolocation) {
+                watchId = navigator.geolocation.watchPosition((pos) => {
+                    set(truckRef, { 
+                        lat: pos.coords.latitude, 
+                        lng: pos.coords.longitude, 
+                        truckNo: tNo, 
+                        routeName: rName, 
+                        timestamp: Date.now() 
+                    });
+                }, (error) => {
+                    alert("ไม่สามารถเข้าถึง GPS ได้ กรุณาเปิดการระบุตำแหน่ง (Location) ในมือถือครับ");
+                }, { 
+                    enableHighAccuracy: true,
+                    maximumAge: 0
                 });
-            }, null, { enableHighAccuracy: true });
-            onDisconnect(ref(db, 'truckLocation')).remove();
+
+                // ป้องกันจอดับ (หากมือถือรองรับ)
+                if ('wakeLock' in navigator) {
+                    navigator.wakeLock.request('screen').catch(err => console.log('Wake Lock failed', err));
+                }
+            } else {
+                alert("อุปกรณ์ของคุณไม่รองรับ GPS");
+            }
         };
 
         window.stopSharing = () => {
             if(watchId) navigator.geolocation.clearWatch(watchId);
-            remove(ref(db, 'truckLocation')).then(() => location.reload());
+            remove(truckRef).then(() => location.reload());
         };
     </script>
 </body>
