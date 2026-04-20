@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ติดตามรถเก็บขยะ (Public)</title>
+    <title>ติดตามรถเก็บขยะเทศบาล</title>
+    
+    <link rel="manifest" href="manifest-user.json">
+    <meta name="theme-color" content="#28a745">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
@@ -14,6 +19,7 @@
     </div>
     
     <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()" title="เปิด/ปิด เสียงเตือน">🔇</button>
+    
     <div id="map"></div>
 
     <div class="report-btn-container">
@@ -55,6 +61,7 @@
         let reportMarkers = {}; 
         let isAudioEnabled = false, hasAlerted200m = false;
 
+        // ติดตามตำแหน่งประชาชน
         map.locate({setView: true, maxZoom: 16, watch: true});
         map.on('locationfound', (e) => {
             userLatLng = e.latlng;
@@ -63,7 +70,7 @@
             else userMarker.setLatLng(userLatLng);
         });
 
-        // ดึงพิกัดรถขยะ
+        // 🚛 ดึงพิกัดรถขยะ (ไม่มีกรอบสี่เหลี่ยม)
         onValue(ref(db, 'truckLocation'), (snapshot) => {
             const d = snapshot.val();
             if (d) {
@@ -77,17 +84,17 @@
                     <div class="truck-icon truck-moving"></div>
                 </div>`;
                 
-                // ล้างกรอบดำของแผนที่ด้วย className: ''
+                // ใช้ className: '' เพื่อล้างกรอบดำของ Leaflet
                 const icon = L.divIcon({ className: '', html: html, iconSize: [120, 85], iconAnchor: [60, 80] });
 
                 if (!truckMarker) truckMarker = L.marker(pos, { icon: icon }).addTo(map);
                 else { truckMarker.setLatLng(pos); truckMarker.setIcon(icon); }
 
+                // คำนวณระยะและส่งเสียง
                 if(userLatLng) {
                     const dist = map.distance(userLatLng, pos);
                     document.getElementById('distance-info').innerText = Math.round(dist) + ' เมตร';
                     
-                    // 🟢 ตรวจสอบระยะและพูดข้อความใหม่ที่อัปเดตแล้ว 🟢
                     if (dist <= 200 && isAudioEnabled && !hasAlerted200m) {
                         const ut = new SpeechSynthesisUtterance("รถเก็บขยะเทศบาลกำลังจะมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อม ขอบคุณจ้า");
                         ut.lang = 'th-TH'; window.speechSynthesis.speak(ut);
@@ -100,7 +107,7 @@
             }
         });
 
-        // 🟢 ดึงพิกัดแจ้งเหตุขยะ (เพิ่มเบอร์โทรด้านบนวงกลม) 🟢
+        // 🟢 ดึงพิกัดแจ้งเหตุขยะ (ไอคอนวงกลม ม่วง/ส้ม พร้อมเบอร์โทรเรืองแสง ไม่มีกรอบ)
         onValue(ref(db, 'reports'), (snapshot) => {
             const reports = snapshot.val();
             Object.values(reportMarkers).forEach(m => map.removeLayer(m));
@@ -112,7 +119,6 @@
                     if (r.status === 'pending') {
                         const colorClass = (r.type === 'ขยะชิ้นใหญ่') ? 'bg-purple' : 'bg-orange';
                         
-                        // สร้างป้ายเบอร์โทรแบบไม่มีกรอบ (ใช้ class report-label-text) ซ้อนด้านบน
                         const reportHtml = `
                         <div class="report-marker-container">
                             <div class="report-label-text">${r.phone || 'ไม่ระบุ'}</div>
@@ -126,12 +132,14 @@
             }
         });
 
+        // ฟังก์ชันระบบเสียง
         window.toggleAudio = () => {
             isAudioEnabled = !isAudioEnabled;
             document.getElementById('audioToggleBtn').innerHTML = isAudioEnabled ? "🔊" : "🔇";
             document.getElementById('audioToggleBtn').classList.toggle('active');
         };
 
+        // ฟังก์ชันส่งรายงาน
         window.sendReport = async (type) => {
             const phone = document.getElementById('reporterPhone').value;
             if(!phone || !userLatLng) return alert("กรุณาระบุเบอร์โทรศัพท์และรอให้ระบบระบุตำแหน่งของคุณก่อน");
@@ -160,6 +168,13 @@
 
         window.openModal = () => document.getElementById('reportModal').style.display = 'flex';
         window.closeModal = () => document.getElementById('reportModal').style.display = 'none';
+    </script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log("Service Worker (User) Registered"));
+        }
     </script>
 </body>
 </html>
