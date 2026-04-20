@@ -87,7 +87,7 @@
                     const dist = map.distance(userLatLng, pos);
                     document.getElementById('distance-info').innerText = Math.round(dist) + ' เมตร';
                     if (dist <= 200 && isAudioEnabled && !hasAlerted200m) {
-                        const ut = new SpeechSynthesisUtterance("รถเก็บขยะเทศบาลนครขอนแก่นกำลังจะมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อม ขอบคุณครับ");
+                        const ut = new SpeechSynthesisUtterance("รถเก็บขยะเทศบาลเมืองบ้านเป็ดกำลังจะมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อม ขอบคุณจ้า");
                         ut.lang = 'th-TH'; window.speechSynthesis.speak(ut);
                         hasAlerted200m = true;
                     } else if (dist > 300) { hasAlerted200m = false; }
