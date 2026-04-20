@@ -3,110 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>แอปคนขับรถขยะ</title>
+    <title>ระบบคนขับรถขยะ</title>
+    
+    <link rel="manifest" href="manifest-driver.json">
+    <meta name="theme-color" content="#007bff">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <link rel="stylesheet" href="style.css">
     <style>
-        /* บังคับซ่อนทุกส่วนไว้ก่อนเพื่อความปลอดภัย */
+        /* บังคับซ่อนส่วนต่างๆ ก่อนเช็ค Login */
         #login-section, #setup-section, #sharing-status { display: none; }
         .visible { display: block !important; }
 
-        /* --- ปรับแต่ง UX/UI เฉพาะหน้าคนขับ (Mobile First) --- */
+        /* --- Mobile UX สำหรับคนขับโดยเฉพาะ --- */
         body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f0f2f5;
-            min-height: 100vh;
-            margin: 0;
-            padding: 15px;
-            box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center;
+            background-color: #f0f2f5; min-height: 100vh;
+            margin: 0; padding: 15px; box-sizing: border-box;
         }
-
         .driver-panel {
-            width: 100%;
-            max-width: 420px;
-            padding: 40px 25px;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            background: #ffffff;
-            text-align: center;
-            box-sizing: border-box;
+            width: 100%; max-width: 420px; padding: 40px 25px;
+            border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: #ffffff; text-align: center; box-sizing: border-box;
         }
-
-        .driver-panel h2 {
-            font-size: 28px;
-            color: #111;
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        .driver-panel p {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 25px;
-        }
-
-        /* ช่องกรอกข้อมูลขนาดใหญ่ */
+        .driver-panel h2 { font-size: 28px; color: #111; margin: 0 0 10px 0; font-weight: bold; }
+        .driver-panel p { font-size: 16px; color: #666; margin-bottom: 25px; }
+        
         .driver-input {
-            width: 100%;
-            padding: 18px 15px;
-            margin-bottom: 20px;
-            border: 2px solid #ddd;
-            border-radius: 16px;
-            font-size: 20px;
-            font-family: 'Chakra Petch', sans-serif;
-            box-sizing: border-box;
-            text-align: center;
-            transition: border-color 0.3s;
+            width: 100%; padding: 18px 15px; margin-bottom: 20px; border: 2px solid #ddd;
+            border-radius: 16px; font-size: 20px; font-family: 'Chakra Petch', sans-serif;
+            box-sizing: border-box; text-align: center; transition: border-color 0.3s;
         }
-
-        .driver-input:focus {
-            border-color: #007bff;
-            outline: none;
-            background-color: #f8fbff;
-        }
-
-        /* ปุ่มกดขนาดใหญ่ */
+        .driver-input:focus { border-color: #007bff; outline: none; background-color: #f8fbff; }
+        
         .driver-btn {
-            width: 100%;
-            padding: 20px;
-            border: none;
-            border-radius: 16px;
-            font-size: 22px;
-            font-weight: bold;
-            font-family: 'Chakra Petch', sans-serif;
-            cursor: pointer;
-            margin-bottom: 15px;
-            transition: all 0.2s;
+            width: 100%; padding: 20px; border: none; border-radius: 16px;
+            font-size: 22px; font-weight: bold; font-family: 'Chakra Petch', sans-serif;
+            cursor: pointer; margin-bottom: 15px; transition: all 0.2s;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15);
         }
-
         .driver-btn:active { transform: scale(0.96); }
         .btn-login { background: #007bff; color: white; }
         .btn-start { background: #28a745; color: white; }
         .btn-stop { background: #dc3545; color: white; margin-top: 30px; }
         .btn-logout { background: #6c757d; color: white; margin-top: 10px; font-size: 18px; padding: 15px; }
 
-        /* ไฟสถานะกระพริบขนาดใหญ่ */
+        /* ไฟสถานะสีเขียวขนาดใหญ่ */
         .status-indicator {
-            display: inline-block;
-            width: 100px;
-            height: 100px;
-            background-color: #28a745;
-            border-radius: 50%;
-            margin: 20px auto 30px auto;
-            border: 5px solid white;
-            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
-            animation: pulse-big 1.5s infinite;
+            display: inline-block; width: 100px; height: 100px; background-color: #28a745;
+            border-radius: 50%; margin: 20px auto 30px auto; border: 5px solid white;
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); animation: pulse-big 1.5s infinite;
         }
-
         @keyframes pulse-big {
             0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
             70% { box-shadow: 0 0 0 35px rgba(40, 167, 69, 0); }
             100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
         }
-
         .info-text { font-size: 24px; font-weight: bold; color: #333; margin: 10px 0; }
         .info-sub { font-size: 18px; color: #555; }
     </style>
@@ -134,12 +86,9 @@
         <div id="sharing-status">
             <h2>📡 กำลังทำงาน</h2>
             <p>ระบบกำลังส่งพิกัดของคุณไปยังแผนที่</p>
-            
             <div class="status-indicator"></div>
-            
             <div class="info-text" id="displayTruckNo">รถ: -</div>
             <div class="info-sub" id="displayRouteName">สาย: -</div>
-
             <button onclick="stopSharing()" class="driver-btn btn-stop">⏹ เลิกงาน (หยุดส่งพิกัด)</button>
         </div>
 
@@ -203,43 +152,38 @@
 
             document.getElementById('setup-section').classList.remove('visible');
             document.getElementById('sharing-status').classList.add('visible');
-            
             document.getElementById('displayTruckNo').innerText = `รถ: ${tNo}`;
             document.getElementById('displayRouteName').innerText = `สาย: ${rName}`;
 
-            // ลบตำแหน่งอัตโนมัติหากเน็ตหลุด/ปิดแอป
             onDisconnect(truckRef).remove();
 
-            // เริ่มอ่านพิกัด
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition((pos) => {
                     set(truckRef, { 
-                        lat: pos.coords.latitude, 
-                        lng: pos.coords.longitude, 
-                        truckNo: tNo, 
-                        routeName: rName, 
-                        timestamp: Date.now() 
+                        lat: pos.coords.latitude, lng: pos.coords.longitude, 
+                        truckNo: tNo, routeName: rName, timestamp: Date.now() 
                     });
                 }, (error) => {
-                    alert("ไม่สามารถเข้าถึง GPS ได้ กรุณาเปิดการระบุตำแหน่ง (Location) ในมือถือครับ");
-                }, { 
-                    enableHighAccuracy: true,
-                    maximumAge: 0
-                });
+                    alert("ไม่สามารถเข้าถึง GPS ได้ กรุณาเปิด Location");
+                }, { enableHighAccuracy: true, maximumAge: 0 });
 
-                // ป้องกันจอดับ (หากมือถือรองรับ)
                 if ('wakeLock' in navigator) {
-                    navigator.wakeLock.request('screen').catch(err => console.log('Wake Lock failed', err));
+                    navigator.wakeLock.request('screen').catch(console.error);
                 }
-            } else {
-                alert("อุปกรณ์ของคุณไม่รองรับ GPS");
-            }
+            } else { alert("อุปกรณ์ของคุณไม่รองรับ GPS"); }
         };
 
         window.stopSharing = () => {
             if(watchId) navigator.geolocation.clearWatch(watchId);
             remove(truckRef).then(() => location.reload());
         };
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log("Service Worker (Driver) Registered"));
+        }
     </script>
 </body>
 </html>
