@@ -25,15 +25,11 @@ body, html {
 .stat-box h4 { margin: 0 0 10px 0; color: #495057; font-size: 16px; border-bottom: 2px solid #ddd; padding-bottom: 5px;}
 .stat-box .count { font-size: 28px; font-weight: bold; color: #28a745; line-height: 1; margin-bottom: 5px; }
 
-.status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-.status-pending { background: #fff3cd; color: #856404; }
-.status-process { background: #cce5ff; color: #004085; }
-
 table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
 th { background: #f8f9fa; }
 
-/* --- ส่วนของ User UI บนแผนที่ --- */
+/* --- ส่วนของ User UI และปุ่มเสียง --- */
 .info-box {
     position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
     z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 10px 25px; 
@@ -41,7 +37,6 @@ th { background: #f8f9fa; }
     text-align: center; min-width: 220px;
 }
 
-/* ปุ่มลำโพงวงกลมลอยตัวมุมขวาบน */
 .btn-audio {
     position: absolute; top: 20px; right: 20px; z-index: 1100;
     background: #ffffff; color: #555; border: none; width: 55px; height: 55px;
@@ -62,24 +57,16 @@ th { background: #f8f9fa; }
     pointer-events: auto; font-family: 'Chakra Petch'; 
 }
 
-/* --- ป้ายพิกัดรถ (2 บรรทัด โปร่งใส) --- */
-.truck-icon-container { 
-    display: flex; flex-direction: column; align-items: center; 
-    justify-content: flex-end; height: 85px; 
-}
+/* --- ไอคอนรถขยะ --- */
+.truck-icon-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 85px; }
 .truck-label-box { 
     display: flex; flex-direction: column; align-items: center; 
     background: rgba(0, 0, 0, 0.65); padding: 4px 10px; border-radius: 8px; 
-    margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(2px);
+    margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.2);
 }
-.truck-id-label { color: white; font-size: 11px; font-weight: bold; white-space: nowrap; line-height: 1.4; }
-.truck-route-label { color: white; font-size: 10px; white-space: nowrap; line-height: 1.2; opacity: 0.9; }
-
-/* วงกลมพิกัดเขียวกระพริบ */
-.truck-icon { 
-    background-color: #28a745; border: 2px solid white; width: 22px; 
-    height: 22px; border-radius: 50%; box-shadow: 0 0 10px rgba(40, 167, 69, 0.5); 
-}
+.truck-id-label { color: white; font-size: 11px; font-weight: bold; white-space: nowrap; }
+.truck-route-label { color: white; font-size: 10px; white-space: nowrap; opacity: 0.9; }
+.truck-icon { background-color: #28a745; border: 2px solid white; width: 22px; height: 22px; border-radius: 50%; }
 .truck-moving { animation: pulse-green 1.5s infinite; }
 @keyframes pulse-green { 
     0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); } 
@@ -87,49 +74,29 @@ th { background: #f8f9fa; }
     100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); } 
 }
 
-/* --- ระบบ Login & Driver UI --- */
-.driver-panel { 
-    background: white; padding: 25px; border-radius: 15px; 
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center; 
-    width: 85%; max-width: 380px; margin: 50px auto; 
+/* --- ไอคอนแจ้งเหตุบนแผนที่ (ม่วง/ส้ม) --- */
+.report-marker-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.report-label { 
+    background: rgba(255, 255, 255, 0.9); color: #333; padding: 2px 8px; 
+    border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #ccc; 
+    margin-bottom: 4px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-input, select { 
-    width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; 
-    border-radius: 8px; box-sizing: border-box; font-family: 'Chakra Petch'; 
-}
-button { 
-    width: 100%; padding: 12px; border: none; border-radius: 8px; 
-    cursor: pointer; font-weight: bold; font-family: 'Chakra Petch'; margin-top: 5px; 
-}
+.circle-icon { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
+.bg-purple { background-color: #9b59b6; } /* ขยะชิ้นใหญ่ */
+.bg-orange { background-color: #e67e22; } /* ขยะล้นถัง */
 
-.btn-primary { background: #007bff; color: white; }
-.btn-danger { background: #dc3545; color: white; }
-.btn-success { background: #28a745; color: white; }
-.btn-print { background: #6c757d; color: white; width: auto; padding: 5px 10px; }
-
-/* การจัดการการซ่อน/แสดงผล */
+/* --- ระบบ Login & Modal --- */
 .hidden { display: none !important; }
-#login-section, #setup-section, #sharing-status, #admin-login-section, #admin-dashboard { display: none; }
 .visible { display: block !important; }
+#login-section, #setup-section, #sharing-status, #admin-login-section, #admin-dashboard { display: none; }
 
-/* --- Modal --- */
-.modal { 
-    display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; 
-    background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; 
-}
-.modal-content { 
-    background: white; padding: 25px; border-radius: 15px; 
-    width: 85%; max-width: 400px; text-align: center; 
-}
+.modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+.modal-content { background: white; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; text-align: center; }
 
-/* --- ส่วนของใบงานและการพิมพ์ --- */
-.ticket { border: 2px dashed #333; padding: 30px; max-width: 420px; margin: 0 auto; text-align: center; background: white; }
-.print-table-container { width: 100%; background: white; padding: 10px; box-sizing: border-box; }
+/* --- การพิมพ์ --- */
+.print-table-container { width: 100%; background: white; padding: 10px; }
 .print-list-table { width: 100%; border-collapse: collapse; }
-.print-list-table th, .print-list-table td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 15px; }
-.row-qr { display: flex; justify-content: center; margin-top: 5px; }
-
-@page { size: A4 portrait; margin: 15mm; }
+.print-list-table th, .print-list-table td { border: 1px solid #000; padding: 10px; text-align: left; }
 @media print {
     body * { visibility: hidden; } 
     #print-section, #print-section * { visibility: visible; } 
