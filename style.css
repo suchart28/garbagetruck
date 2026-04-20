@@ -17,6 +17,7 @@ body, html {
 
 table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
+th { background: #f8f9fa; }
 
 /* --- User UI --- */
 .info-box {
@@ -24,44 +25,57 @@ th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; white-s
     z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 10px 25px; 
     border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); text-align: center; min-width: 220px;
 }
+.info-box h3 { margin: 0; font-size: 13px; color: #666; }
+#distance-info { font-size: 18px; font-weight: bold; color: #333; }
+
 .btn-audio {
     position: absolute; top: 20px; right: 20px; z-index: 1100;
     background: #ffffff; color: #555; border: none; width: 55px; height: 55px;
     border-radius: 50%; font-size: 24px; cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center; transition: 0.3s;
 }
 .btn-audio.active { background: #28a745; color: white; }
+
+.report-btn-container { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 100%; text-align: center; pointer-events: none; }
+.btn-report { background-color: #ff9800; color: white; border: none; padding: 15px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 16px; pointer-events: auto; font-family: 'Chakra Petch'; }
 
 /* --- ป้ายรถขยะ --- */
 .truck-icon-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 85px; }
 .truck-label-box { 
     display: flex; flex-direction: column; align-items: center; 
     background: rgba(0, 0, 0, 0.65); padding: 4px 10px; border-radius: 8px; 
-    margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(2px);
 }
-.truck-id-label { color: white; font-size: 11px; font-weight: bold; }
-.truck-route-label { color: white; font-size: 10px; opacity: 0.9; }
+.truck-id-label { color: white; font-size: 11px; font-weight: bold; line-height: 1.4; }
+.truck-route-label { color: white; font-size: 10px; opacity: 0.9; line-height: 1.2; }
 .truck-icon { background-color: #28a745; border: 2px solid white; width: 22px; height: 22px; border-radius: 50%; }
 .truck-moving { animation: pulse-green 1.5s infinite; }
 @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(40, 167, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); } }
 
-/* --- หมุดแจ้งเหตุ (ใหม่) --- */
-.report-marker-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+/* --- หมุดแจ้งเหตุ (ม่วง/ส้ม ไม่กระพริบ) --- */
+.report-marker-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 50px; }
 .report-label { 
-    background: rgba(255, 255, 255, 0.9); color: #333; padding: 2px 8px; 
-    border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #ccc; 
+    background: rgba(255, 255, 255, 0.95); color: #333; padding: 2px 8px; 
+    border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #aaa; 
     margin-bottom: 4px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
-.circle-icon { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
+.circle-icon { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4); }
 .bg-purple { background-color: #9b59b6; } /* ขยะชิ้นใหญ่ */
-.bg-orange { background-color: #e67e22; } /* ขยะล้นถัง */
+.bg-orange { background-color: #ff9800; } /* ขยะล้นถัง */
 
-/* --- Utils --- */
+/* --- Utils & Buttons --- */
 .visible { display: block !important; }
 .hidden { display: none !important; }
 #login-section, #setup-section, #sharing-status, #admin-login-section, #admin-dashboard { display: none; }
-.btn-primary { background: #007bff; color: white; padding: 12px; border-radius: 8px; cursor: pointer; border:none; width: 100%; font-weight: bold; }
-.btn-success { background: #28a745; color: white; padding: 10px; border-radius: 8px; cursor: pointer; border:none; }
-.btn-danger { background: #dc3545; color: white; padding: 10px; border-radius: 8px; cursor: pointer; border:none; }
+.btn-primary { background: #007bff; color: white; padding: 12px; border-radius: 8px; cursor: pointer; border:none; width: 100%; font-weight: bold; font-family: 'Chakra Petch'; }
+.btn-success { background: #28a745; color: white; padding: 10px; border-radius: 8px; cursor: pointer; border:none; font-family: 'Chakra Petch'; }
+.btn-danger { background: #dc3545; color: white; padding: 10px; border-radius: 8px; cursor: pointer; border:none; font-family: 'Chakra Petch'; }
 .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
 .modal-content { background: white; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; text-align: center; }
+input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-family: 'Chakra Petch'; font-size: 16px; box-sizing: border-box;}
+
+/* Print */
+.print-table-container { width: 100%; background: white; padding: 10px; }
+.print-list-table { width: 100%; border-collapse: collapse; }
+.print-list-table th, .print-list-table td { border: 1px solid #000; padding: 10px; text-align: left; }
+@media print { body * { visibility: hidden; } #print-section, #print-section * { visibility: visible; } #print-section { position: absolute; left: 0; top: 0; width: 100%; display: block !important; } }
