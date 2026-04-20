@@ -69,7 +69,10 @@
             if (d) {
                 const pos = [d.lat, d.lng];
                 const html = `<div class="truck-icon-container">
-                    <div class="truck-label-box"><span class="truck-id-label">เบอร์รถ: ${d.truckNo}</span><span class="truck-route-label">${d.routeName}</span></div>
+                    <div class="truck-label-box">
+                        <span class="truck-id-label">เบอร์รถ: ${d.truckNo}</span>
+                        <span class="truck-route-label">${d.routeName}</span>
+                    </div>
                     <div class="truck-icon truck-moving"></div>
                 </div>`;
                 const icon = L.divIcon({ html: html, iconSize: [120, 85], iconAnchor: [60, 80] });
@@ -89,7 +92,7 @@
             }
         });
 
-        // 🟢 ดึงพิกัดแจ้งเหตุขยะ (ไอคอนวงกลมล้วน ม่วง/ส้ม) 🟢
+        // ดึงพิกัดแจ้งเหตุขยะ (ไอคอนวงกลมล้วน ม่วง/ส้ม)
         onValue(ref(db, 'reports'), (snapshot) => {
             const reports = snapshot.val();
             Object.values(reportMarkers).forEach(m => map.removeLayer(m));
@@ -101,11 +104,13 @@
                     if (r.status === 'pending') {
                         const colorClass = (r.type === 'ขยะชิ้นใหญ่') ? 'bg-purple' : 'bg-orange';
                         
-                        // สร้างเฉพาะ div วงกลม ไม่มีข้อความใดๆ
-                        const reportHtml = `<div class="circle-icon ${colorClass}"></div>`;
+                        const reportHtml = `
+                        <div class="report-marker-container">
+                            <div class="report-label">${r.phone || 'ไม่ระบุ'}</div>
+                            <div class="circle-icon ${colorClass}"></div>
+                        </div>`;
                         
-                        // ปรับขนาดไอคอนและ Anchor ให้กึ่งกลางวงกลมอยู่ตรงพิกัดพอดี (ขนาด 24x24)
-                        const icon = L.divIcon({ html: reportHtml, iconSize: [24, 24], iconAnchor: [12, 12], className: '' });
+                        const icon = L.divIcon({ html: reportHtml, iconSize: [100, 50], iconAnchor: [50, 42] });
                         reportMarkers[key] = L.marker([r.lat, r.lng], { icon: icon }).addTo(map);
                     }
                 });
