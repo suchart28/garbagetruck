@@ -3,68 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการงานแจ้งเหตุ (Admin)</title>
+    <title>Admin - จัดการงานขยะ</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        /* บังคับซ่อนส่วน Dashboard ไว้ก่อนเสมอจนกว่าจะ Login สำเร็จ */
-        #admin-login-section, #admin-dashboard { display: none; }
-        .visible { display: block !important; }
-    </style>
 </head>
 <body>
     <div class="admin-container">
-        <div id="admin-login-section" class="card" style="max-width: 400px; margin: 100px auto; text-align: center;">
-            <h2 style="margin-top:0;">ผู้ดูแลระบบ (Admin)</h2>
-            <p>กรุณาใส่รหัสผ่านเพื่อเข้าถึงข้อมูล</p>
-            <input type="password" id="adminPass" placeholder="ใส่รหัสผ่านแอดมิน">
+        <div id="login-section" class="card" style="max-width: 400px; margin: 100px auto; text-align: center;">
+            <h2>Admin Login</h2>
+            <input type="password" id="adminPass" placeholder="รหัสผ่าน">
             <button onclick="loginAdmin()" class="btn-primary">เข้าสู่ระบบ</button>
         </div>
 
-        <div id="admin-dashboard">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h1 style="margin:0;">แผงควบคุมระบบขยะ</h1>
-                <button onclick="logoutAdmin()" class="btn-danger" style="width: auto; padding: 8px 20px;">ออกจากระบบ</button>
+        <div id="admin-dashboard" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1>แผงจัดการงานแจ้งเหตุ</h1>
+                <button onclick="logout()" class="btn-danger" style="width: auto;">Logout</button>
             </div>
-
             <div class="card">
-                <h3 style="margin: 0; color: #004085;">📊 สถิติผลการปฏิบัติงาน (รายเดือน)</h3>
-                <div id="statsBox" class="stats-container">
-                    </div>
-            </div>
-
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
-                    <h2 style="margin: 0; color: #dc3545;">🚨 งานที่ค้างดำเนินการ (ล่าสุดอยู่บน)</h2>
-                    <button onclick="printSummaryTable()" class="btn-success" style="width:auto; padding:8px 15px;">🖨️ พิมพ์ตารางงาน (A4)</button>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>รหัสงาน</th>
-                                <th>ประเภท</th>
-                                <th>เบอร์ติดต่อ</th>
-                                <th>เวลาที่แจ้ง</th>
-                                <th>สถานะ</th>
-                                <th>จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reportTable">
-                            </tbody>
-                    </table>
-                </div>
+                <table>
+                    <thead>
+                        <tr><th>ประเภท</th><th>เบอร์โทร</th><th>เวลา</th><th>สถานะ</th><th>จัดการ</th></tr>
+                    </thead>
+                    <tbody id="reportTable"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <div id="print-section" class="hidden"></div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-        import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -78,143 +47,49 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        let allReports = [];
 
-        // ตรวจสอบสถานะการ Login ทันที
         function checkAuth() {
-            const isAdmin = localStorage.getItem('isAdminLoggedIn');
-            document.getElementById('admin-login-section').classList.remove('visible');
-            document.getElementById('admin-dashboard').classList.remove('visible');
-
-            if (isAdmin === 'true') {
-                document.getElementById('admin-dashboard').classList.add('visible');
-                loadAllReports(); // เรียกโหลดข้อมูลเมื่อผ่านการตรวจสิทธิ์
-            } else {
-                document.getElementById('admin-login-section').classList.add('visible');
+            if(localStorage.getItem('isAdmin') === 'true') {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                loadData();
             }
         }
         checkAuth();
 
         window.loginAdmin = () => {
-            const pass = document.getElementById('adminPass').value;
-            if (pass === "987654321") {
-                localStorage.setItem('isAdminLoggedIn', 'true');
-                checkAuth();
-            } else {
-                alert("รหัสผ่านไม่ถูกต้อง");
-            }
+            if(document.getElementById('adminPass').value === '987654321') {
+                localStorage.setItem('isAdmin', 'true');
+                location.reload();
+            } else alert("รหัสผ่านผิด");
         };
 
-        window.logoutAdmin = () => {
-            localStorage.removeItem('isAdminLoggedIn');
-            location.reload();
-        };
+        window.logout = () => { localStorage.clear(); location.reload(); };
 
-        function loadAllReports() {
-            onValue(ref(db, 'reports'), (snapshot) => {
-                const data = snapshot.val();
+        function loadData() {
+            onValue(ref(db, 'reports'), (snap) => {
                 const table = document.getElementById('reportTable');
-                const statsBox = document.getElementById('statsBox');
                 table.innerHTML = "";
-                statsBox.innerHTML = "";
-                allReports = [];
-
-                if (!data) return;
-
-                let monthlyStats = {};
-
-                // จัดเตรียมข้อมูล
-                Object.keys(data).forEach(key => {
-                    const r = data[key];
-                    r.firebaseKey = key;
-                    allReports.push(r);
-
-                    // คำนวณสถิติรายเดือน
-                    const d = new Date(r.timestamp);
-                    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                    const monthLabel = d.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
-                    
-                    if (!monthlyStats[monthKey]) {
-                        monthlyStats[monthKey] = { total: 0, done: 0, label: monthLabel };
-                    }
-                    monthlyStats[monthKey].total += 1;
-                    if (r.status === 'done') monthlyStats[monthKey].done += 1;
-                });
-
-                // แสดงผลสถิติ
-                Object.values(monthlyStats).forEach(stat => {
-                    statsBox.innerHTML += `
-                        <div class="stat-box">
-                            <h4>${stat.label}</h4>
-                            <div class="count">${stat.done}/${stat.total}</div>
-                            <span style="font-size:12px;">(เสร็จสิ้น/ทั้งหมด)</span>
-                        </div>`;
-                });
-
-                // แสดงผลตาราง (เฉพาะที่ยังไม่เสร็จ และเรียงลำดับล่าสุดขึ้นก่อน)
-                allReports
-                    .filter(r => r.status !== 'done')
-                    .sort((a, b) => b.timestamp - a.timestamp)
-                    .forEach(r => {
-                        table.innerHTML += `
-                            <tr>
-                                <td><b>${r.reportId || '-'}</b></td>
+                const data = snap.val();
+                if(data) {
+                    Object.keys(data).forEach(key => {
+                        const r = data[key];
+                        if(r.status === 'pending') {
+                            table.innerHTML += `<tr>
                                 <td>${r.type}</td>
-                                <td><a href="tel:${r.phone}">${r.phone}</a></td>
-                                <td>${new Date(r.timestamp).toLocaleString('th-TH')}</td>
-                                <td><span class="status-badge status-pending">รอดำเนินการ</span></td>
-                                <td>
-                                    <button onclick="updateStatus('${r.firebaseKey}', 'done')" class="btn-success" style="width:auto; padding:5px 10px;">เสร็จสิ้น</button>
-                                    <button onclick="deleteReport('${r.firebaseKey}')" class="btn-danger" style="width:auto; padding:5px 10px;">ลบ</button>
-                                </td>
+                                <td>${r.phone}</td>
+                                <td>${new Date(r.timestamp).toLocaleString()}</td>
+                                <td>รอดำเนินการ</td>
+                                <td><button onclick="done('${key}')" class="btn-success">สำเร็จ (ลบหมุด)</button></td>
                             </tr>`;
+                        }
                     });
+                }
             });
         }
 
-        window.updateStatus = (key, status) => {
-            update(ref(db, `reports/${key}`), { status: status });
-        };
-
-        window.deleteReport = (key) => {
-            if (confirm("ต้องการลบข้อมูลนี้ใช่หรือไม่?")) {
-                remove(ref(db, `reports/${key}`));
-            }
-        };
-
-        // ฟังก์ชันพิมพ์ตารางงาน (ตามฟังก์ชันเดิมที่คุณต้องการ)
-        window.printSummaryTable = () => {
-            const tasksToPrint = allReports.filter(r => r.status !== 'done');
-            if (tasksToPrint.length === 0) { alert("ไม่มีงานที่ต้องดำเนินการ"); return; }
-            
-            let rows = "";
-            tasksToPrint.forEach((r, idx) => {
-                rows += `
-                    <tr>
-                        <td>${idx + 1}</td>
-                        <td>${r.reportId}<br>${r.type}<br>${new Date(r.timestamp).toLocaleString('th-TH')}</td>
-                        <td>${r.phone}</td>
-                        <td style="text-align:center;"><div id="qr-${idx}" class="row-qr"></div></td>
-                        <td></td>
-                    </tr>`;
-            });
-
-            const printSec = document.getElementById('print-section');
-            printSec.innerHTML = `
-                <div class="print-table-container">
-                    <h2 style="text-align:center;">ตารางปฏิบัติงานเก็บขยะ</h2>
-                    <table class="print-list-table">
-                        <thead><tr><th>#</th><th>รหัสงาน/ประเภท/เวลา</th><th>เบอร์ติดต่อ</th><th>นำทาง</th><th>ลายมือชื่อ</th></tr></thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>`;
-
-            tasksToPrint.forEach((r, idx) => {
-                new QRCode(document.getElementById(`qr-${idx}`), { text: `https://www.google.com/maps?q=${r.lat},${r.lng}`, width: 60, height: 60 });
-            });
-
-            printSec.classList.remove('hidden');
-            setTimeout(() => { window.print(); printSec.classList.add('hidden'); }, 1000);
+        window.done = (key) => {
+            update(ref(db, `reports/${key}`), { status: 'done' });
         };
     </script>
 </body>
