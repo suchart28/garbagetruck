@@ -1,3 +1,4 @@
+/* นำเข้าฟอนต์ Chakra Petch */
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;700&display=swap');
 
 body, html { 
@@ -39,20 +40,49 @@ th { background: #f8f9fa; }
 .report-btn-container { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 100%; text-align: center; pointer-events: none; }
 .btn-report { background-color: #ff9800; color: white; border: none; padding: 15px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 16px; pointer-events: auto; font-family: 'Chakra Petch'; }
 
-/* --- ป้ายรถขยะ --- */
+/* --- ป้ายรถขยะ (เอาพื้นหลังออก เน้นตัวหนังสือขอบขาว) --- */
 .truck-icon-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 85px; }
 .truck-label-box { 
     display: flex; flex-direction: column; align-items: center; 
-    background: rgba(0, 0, 0, 0.65); padding: 4px 10px; border-radius: 8px; 
-    margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(2px);
+    margin-bottom: 6px; 
 }
-.truck-id-label { color: white; font-size: 11px; font-weight: bold; line-height: 1.4; }
-.truck-route-label { color: white; font-size: 10px; opacity: 0.9; line-height: 1.2; }
+.truck-id-label { 
+    color: #111; 
+    font-size: 12px; 
+    font-weight: 900; 
+    line-height: 1.3; 
+    text-shadow: 
+        -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff,
+        -1.5px  1.5px 0 #fff, 1.5px  1.5px 0 #fff,
+         0px 2px 3px rgba(0,0,0,0.4);
+}
+.truck-route-label { 
+    color: #004085; /* ใช้สีน้ำเงินเข้มให้แยกชัดกับเบอร์รถ */
+    font-size: 11px; 
+    font-weight: bold; 
+    line-height: 1.2; 
+    text-shadow: 
+        -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff,
+        -1.5px  1.5px 0 #fff, 1.5px  1.5px 0 #fff,
+         0px 2px 3px rgba(0,0,0,0.4);
+}
 .truck-icon { background-color: #28a745; border: 2px solid white; width: 22px; height: 22px; border-radius: 50%; }
 .truck-moving { animation: pulse-green 1.5s infinite; }
 @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(40, 167, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); } }
 
 /* --- หมุดแจ้งเหตุ (วงกลมล้วน ไม่มีกรอบข้อความ) --- */
+.report-marker-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 50px; }
+.report-label { 
+    color: #111; 
+    font-size: 12px; 
+    font-weight: 900; 
+    margin-bottom: 4px; 
+    white-space: nowrap; 
+    text-shadow: 
+        -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff,
+        -1.5px  1.5px 0 #fff, 1.5px  1.5px 0 #fff,
+         0px 2px 3px rgba(0,0,0,0.4);
+}
 .circle-icon { 
     width: 20px; 
     height: 20px; 
