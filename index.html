@@ -77,7 +77,7 @@
                     <div class="truck-icon truck-moving"></div>
                 </div>`;
                 
-                // --- เพิ่ม className: '' ตรงนี้เพื่อลบกรอบสี่เหลี่ยมสีดำที่แผนที่แถมมาให้ ---
+                // ล้างกรอบดำของแผนที่ด้วย className: ''
                 const icon = L.divIcon({ className: '', html: html, iconSize: [120, 85], iconAnchor: [60, 80] });
 
                 if (!truckMarker) truckMarker = L.marker(pos, { icon: icon }).addTo(map);
@@ -86,8 +86,10 @@
                 if(userLatLng) {
                     const dist = map.distance(userLatLng, pos);
                     document.getElementById('distance-info').innerText = Math.round(dist) + ' เมตร';
+                    
+                    // 🟢 ตรวจสอบระยะและพูดข้อความใหม่ที่อัปเดตแล้ว 🟢
                     if (dist <= 200 && isAudioEnabled && !hasAlerted200m) {
-                        const ut = new SpeechSynthesisUtterance("รถเก็บขยะเทศบาลเมืองบ้านเป็ดกำลังจะมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อม ขอบคุณจ้า");
+                        const ut = new SpeechSynthesisUtterance("รถเก็บขยะเทศบาลกำลังจะมาถึง โปรดเตรียมถุงขยะที่จะทิ้งให้พร้อม ขอบคุณจ้า");
                         ut.lang = 'th-TH'; window.speechSynthesis.speak(ut);
                         hasAlerted200m = true;
                     } else if (dist > 300) { hasAlerted200m = false; }
@@ -98,7 +100,7 @@
             }
         });
 
-        // ดึงพิกัดแจ้งเหตุขยะ (ไอคอนวงกลมล้วน ม่วง/ส้ม)
+        // 🟢 ดึงพิกัดแจ้งเหตุขยะ (เพิ่มเบอร์โทรด้านบนวงกลม) 🟢
         onValue(ref(db, 'reports'), (snapshot) => {
             const reports = snapshot.val();
             Object.values(reportMarkers).forEach(m => map.removeLayer(m));
@@ -109,10 +111,15 @@
                     const r = reports[key];
                     if (r.status === 'pending') {
                         const colorClass = (r.type === 'ขยะชิ้นใหญ่') ? 'bg-purple' : 'bg-orange';
-                        const reportHtml = `<div class="circle-icon ${colorClass}"></div>`;
                         
-                        // มี className: '' เพื่อกันกรอบดำเช่นกัน
-                        const icon = L.divIcon({ className: '', html: reportHtml, iconSize: [24, 24], iconAnchor: [12, 12] });
+                        // สร้างป้ายเบอร์โทรแบบไม่มีกรอบ (ใช้ class report-label-text) ซ้อนด้านบน
+                        const reportHtml = `
+                        <div class="report-marker-container">
+                            <div class="report-label-text">${r.phone || 'ไม่ระบุ'}</div>
+                            <div class="circle-icon ${colorClass}"></div>
+                        </div>`;
+                        
+                        const icon = L.divIcon({ className: '', html: reportHtml, iconSize: [100, 50], iconAnchor: [50, 42] });
                         reportMarkers[key] = L.marker([r.lat, r.lng], { icon: icon }).addTo(map);
                     }
                 });
