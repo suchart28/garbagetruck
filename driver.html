@@ -2,57 +2,115 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>คนขับรถขยะ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบคนขับรถเก็บขยะ (GPS)</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* บังคับซ่อนทุกส่วนไว้ก่อนเพื่อความปลอดภัย */
+        #login-section, #setup-section, #sharing-status { display: none; }
+        .visible { display: block !important; }
+        .flex-visible { display: flex !important; }
+    </style>
 </head>
 <body>
     <div class="driver-panel">
+        <h2>ระบบคนขับ (GPS)</h2>
+        
         <div id="login-section">
-            <h2>Driver Login</h2>
-            <input type="password" id="driverPass" placeholder="รหัสผ่าน">
-            <button onclick="login()" class="btn-primary">เข้าสู่ระบบ</button>
+            <p>กรุณาใส่รหัสผ่านเพื่อเริ่มงาน</p>
+            <input type="password" id="password" placeholder="ใส่รหัสผ่านคนขับ">
+            <button onclick="loginDriver()" class="btn-primary">เข้าสู่ระบบ</button>
         </div>
 
-        <div id="setup-section" class="hidden">
-            <input type="text" id="truckNo" placeholder="เบอร์รถ">
-            <button onclick="start()" class="btn-success">เริ่มส่งตำแหน่ง</button>
+        <div id="setup-section">
+            <p>ระบุหมายเลขรถและสายการทำงาน</p>
+            <input type="text" id="truckNo" placeholder="หมายเลขรถ (เช่น ขก-001)">
+            <input type="text" id="routeName" placeholder="ชื่อสาย/เส้นทาง (เช่น สายตลาดสด)">
+            <button onclick="startSharing()" class="btn-success">เริ่มส่งพิกัดตำแหน่ง</button>
+            <button onclick="logoutDriver()" class="btn-danger" style="background:#6c757d; margin-top:20px;">ออกจากระบบ</button>
         </div>
 
-        <div id="sharing-status" class="hidden">
-            <h3 style="color: green;">กำลังแชร์ตำแหน่ง...</h3>
-            <button onclick="location.reload()" class="btn-danger">หยุดแชร์</button>
+        <div id="sharing-status">
+            <div style="background: #e9ecef; padding: 25px; border-radius: 12px; border: 2px solid #28a745;">
+                <h3 style="color: #28a745; margin: 0; display: flex; align-items: center; justify-content: center;">
+                    กำลังส่งพิกัด GPS...
+                </h3>
+                <p id="truckDisplay" style="font-weight: bold; margin-top:15px; font-size: 18px;"></p>
+            </div>
+            <button onclick="stopSharing()" class="btn-danger" style="margin-top: 25px;">หยุดการส่งพิกัด (เลิกงาน)</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-        import { getDatabase, ref, set, onDisconnect } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
+        import { getDatabase, ref, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDJqNlopbrZAbRgGZmUvDhA_rlYWKp5ONM",
+            authDomain: "suchartstudio-9a78d.firebaseapp.com",
             databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "suchartstudio-9a78d",
+            storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+            messagingSenderId: "953369646185",
+            appId: "1:953369646185:web:ad68f20b3ef395716ebef8",
+            measurementId: "G-7L7V9JEFT7"
         };
+
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        let watchId = null;
 
-        window.login = () => {
-            if(document.getElementById('driverPass').value === '987654321') {
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('setup-section').classList.remove('hidden');
+        // ตรวจสอบสถานะทันทีที่โหลดหน้า
+        function checkAuth() {
+            const isLoggedIn = localStorage.getItem('isDriverLoggedIn');
+            // ล้าง UI ทั้งหมดก่อน
+            document.getElementById('login-section').classList.remove('visible');
+            document.getElementById('setup-section').classList.remove('visible');
+            
+            if (isLoggedIn === 'true') {
+                document.getElementById('setup-section').classList.add('visible');
+            } else {
+                document.getElementById('login-section').classList.add('visible');
+            }
+        }
+        checkAuth();
+
+        window.loginDriver = () => {
+            const pass = document.getElementById('password').value;
+            if(pass === "987654321") {
+                localStorage.setItem('isDriverLoggedIn', 'true');
+                checkAuth();
+            } else {
+                alert("รหัสผ่านไม่ถูกต้อง!");
             }
         };
 
-        window.start = () => {
-            const no = document.getElementById('truckNo').value;
-            document.getElementById('setup-section').classList.add('hidden');
-            document.getElementById('sharing-status').classList.remove('hidden');
-            
-            navigator.geolocation.watchPosition(p => {
-                set(ref(db, 'truckLocation'), {
-                    truckNo: no, lat: p.coords.latitude, lng: p.coords.longitude, timestamp: Date.now()
+        window.logoutDriver = () => {
+            localStorage.removeItem('isDriverLoggedIn');
+            location.reload();
+        };
+
+        window.startSharing = () => {
+            const tNo = document.getElementById('truckNo').value;
+            const rName = document.getElementById('routeName').value;
+            if(!tNo || !rName) { alert("กรุณากรอกข้อมูลให้ครบ"); return; }
+
+            document.getElementById('setup-section').classList.remove('visible');
+            document.getElementById('sharing-status').classList.add('visible');
+            document.getElementById('truckDisplay').innerText = `รถ: ${tNo} | สาย: ${rName}`;
+
+            watchId = navigator.geolocation.watchPosition((pos) => {
+                set(ref(db, 'truckLocation'), { 
+                    lat: pos.coords.latitude, lng: pos.coords.longitude, 
+                    truckNo: tNo, routeName: rName, timestamp: Date.now() 
                 });
-            }, null, {enableHighAccuracy: true});
+            }, null, { enableHighAccuracy: true });
             onDisconnect(ref(db, 'truckLocation')).remove();
+        };
+
+        window.stopSharing = () => {
+            if(watchId) navigator.geolocation.clearWatch(watchId);
+            remove(ref(db, 'truckLocation')).then(() => location.reload());
         };
     </script>
 </body>
