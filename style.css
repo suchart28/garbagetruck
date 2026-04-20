@@ -52,23 +52,14 @@ th { background: #f8f9fa; }
 .truck-moving { animation: pulse-green 1.5s infinite; }
 @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(40, 167, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); } }
 
-/* --- หมุดแจ้งเหตุ (ปรับไม่มีกรอบสี่เหลี่ยม) --- */
-.report-marker-container { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 50px; }
-.report-label { 
-    color: #111; /* สีตัวหนังสือเข้ม */
-    font-size: 12px; 
-    font-weight: 900; 
-    margin-bottom: 4px; 
-    white-space: nowrap; 
-    /* สร้างขอบสีขาวหนาๆ รอบตัวหนังสือ เพื่อให้อ่านง่ายบนแผนที่แทนการใส่กรอบสี่เหลี่ยม */
-    text-shadow: 
-        -1.5px -1.5px 0 #fff,
-         1.5px -1.5px 0 #fff,
-        -1.5px  1.5px 0 #fff,
-         1.5px  1.5px 0 #fff,
-         0px 2px 3px rgba(0,0,0,0.4);
+/* --- หมุดแจ้งเหตุ (วงกลมล้วน ไม่มีกรอบข้อความ) --- */
+.circle-icon { 
+    width: 20px; 
+    height: 20px; 
+    border-radius: 50%; 
+    border: 2px solid white; 
+    box-shadow: 0 0 6px rgba(0,0,0,0.5); 
 }
-.circle-icon { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4); }
 .bg-purple { background-color: #9b59b6; } /* ขยะชิ้นใหญ่ */
 .bg-orange { background-color: #ff9800; } /* ขยะล้นถัง */
 
