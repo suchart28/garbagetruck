@@ -68,14 +68,17 @@
             const d = snapshot.val();
             if (d) {
                 const pos = [d.lat, d.lng];
-                const html = `<div class="truck-icon-container">
+                const html = `
+                <div class="truck-icon-container">
                     <div class="truck-label-box">
                         <span class="truck-id-label">เบอร์รถ: ${d.truckNo}</span>
                         <span class="truck-route-label">${d.routeName}</span>
                     </div>
                     <div class="truck-icon truck-moving"></div>
                 </div>`;
-                const icon = L.divIcon({ html: html, iconSize: [120, 85], iconAnchor: [60, 80] });
+                
+                // --- เพิ่ม className: '' ตรงนี้เพื่อลบกรอบสี่เหลี่ยมสีดำที่แผนที่แถมมาให้ ---
+                const icon = L.divIcon({ className: '', html: html, iconSize: [120, 85], iconAnchor: [60, 80] });
 
                 if (!truckMarker) truckMarker = L.marker(pos, { icon: icon }).addTo(map);
                 else { truckMarker.setLatLng(pos); truckMarker.setIcon(icon); }
@@ -89,6 +92,9 @@
                         hasAlerted200m = true;
                     } else if (dist > 300) { hasAlerted200m = false; }
                 }
+            } else {
+                document.getElementById('distance-info').innerText = "รถยังไม่ออกปฏิบัติงาน";
+                if(truckMarker) { map.removeLayer(truckMarker); truckMarker = null; }
             }
         });
 
@@ -103,14 +109,10 @@
                     const r = reports[key];
                     if (r.status === 'pending') {
                         const colorClass = (r.type === 'ขยะชิ้นใหญ่') ? 'bg-purple' : 'bg-orange';
+                        const reportHtml = `<div class="circle-icon ${colorClass}"></div>`;
                         
-                        const reportHtml = `
-                        <div class="report-marker-container">
-                            <div class="report-label">${r.phone || 'ไม่ระบุ'}</div>
-                            <div class="circle-icon ${colorClass}"></div>
-                        </div>`;
-                        
-                        const icon = L.divIcon({ html: reportHtml, iconSize: [100, 50], iconAnchor: [50, 42] });
+                        // มี className: '' เพื่อกันกรอบดำเช่นกัน
+                        const icon = L.divIcon({ className: '', html: reportHtml, iconSize: [24, 24], iconAnchor: [12, 12] });
                         reportMarkers[key] = L.marker([r.lat, r.lng], { icon: icon }).addTo(map);
                     }
                 });
