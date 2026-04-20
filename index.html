@@ -52,10 +52,9 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         let userLatLng = null, truckMarker = null, userMarker = null;
-        let reportMarkers = {}; // เก็บ Object หมุดแจ้งเหตุ
+        let reportMarkers = {}; 
         let isAudioEnabled = false, hasAlerted200m = false;
 
-        // ติดตามตำแหน่งประชาชน
         map.locate({setView: true, maxZoom: 16, watch: true});
         map.on('locationfound', (e) => {
             userLatLng = e.latlng;
@@ -90,21 +89,16 @@
             }
         });
 
-        // 🟢 ดึงพิกัดแจ้งเหตุขยะ (ม่วง/ส้ม) 🟢
+        // ดึงพิกัดแจ้งเหตุขยะ (ม่วง/ส้ม - ไม่มีกรอบขาว)
         onValue(ref(db, 'reports'), (snapshot) => {
             const reports = snapshot.val();
-            
-            // ล้างหมุดเดิมออกก่อนเสมอเพื่ออัปเดตแบบ Real-time
             Object.values(reportMarkers).forEach(m => map.removeLayer(m));
             reportMarkers = {};
 
             if (reports) {
                 Object.keys(reports).forEach(key => {
                     const r = reports[key];
-                    
-                    // แสดงเฉพาะสถานะ pending (รอดำเนินการ)
                     if (r.status === 'pending') {
-                        // แยกสีตามประเภท
                         const colorClass = (r.type === 'ขยะชิ้นใหญ่') ? 'bg-purple' : 'bg-orange';
                         
                         const reportHtml = `
@@ -113,7 +107,6 @@
                             <div class="circle-icon ${colorClass}"></div>
                         </div>`;
                         
-                        // ปรับจุด Anchor ให้ชี้ตรงพิกัดเป๊ะๆ (ตรงกลางล่างของวงกลม)
                         const icon = L.divIcon({ html: reportHtml, iconSize: [100, 50], iconAnchor: [50, 42] });
                         reportMarkers[key] = L.marker([r.lat, r.lng], { icon: icon }).addTo(map);
                     }
@@ -121,14 +114,12 @@
             }
         });
 
-        // ฟังก์ชันเปิด/ปิดเสียง
         window.toggleAudio = () => {
             isAudioEnabled = !isAudioEnabled;
             document.getElementById('audioToggleBtn').innerHTML = isAudioEnabled ? "🔊" : "🔇";
             document.getElementById('audioToggleBtn').classList.toggle('active');
         };
 
-        // ฟังก์ชันแจ้งเหตุ
         window.sendReport = async (type) => {
             const phone = document.getElementById('reporterPhone').value;
             if(!phone || !userLatLng) return alert("กรุณาระบุเบอร์โทรศัพท์และรอให้ระบบระบุตำแหน่งของคุณก่อน");
