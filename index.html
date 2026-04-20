@@ -13,7 +13,7 @@
         <div id="distance-info">กำลังหาพิกัด...</div>
     </div>
     
-    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()">🔇</button>
+    <button id="audioToggleBtn" class="btn-audio" onclick="toggleAudio()" title="เปิด/ปิด เสียงเตือน">🔇</button>
     <div id="map"></div>
 
     <div class="report-btn-container">
@@ -22,11 +22,11 @@
 
     <div id="reportModal" class="modal">
         <div class="modal-content">
-            <h3>แจ้งปัญหาขยะ</h3>
-            <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ (จำเป็น)" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
+            <h3 style="margin-top:0">แจ้งปัญหาขยะ</h3>
+            <input type="tel" id="reporterPhone" placeholder="เบอร์โทรติดต่อกลับ (จำเป็น)">
             <button onclick="sendReport('ขยะชิ้นใหญ่')" class="btn-primary">ขยะชิ้นใหญ่</button>
-            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800; margin-top:10px;">ขยะล้นถัง</button>
-            <button onclick="closeModal()" class="btn-danger" style="margin-top:10px; width:100%;">ยกเลิก</button>
+            <button onclick="sendReport('ขยะล้นถัง')" class="btn-primary" style="background: #ff9800; margin-top:5px;">ขยะล้นถัง</button>
+            <button onclick="closeModal()" class="btn-danger" style="margin-top:5px;">ยกเลิก</button>
         </div>
     </div>
 
@@ -52,9 +52,10 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         let userLatLng = null, truckMarker = null, userMarker = null;
-        let reportMarkers = {}; // เก็บหมุดแจ้งเหตุ
+        let reportMarkers = {}; // เก็บ Object หมุดแจ้งเหตุ
         let isAudioEnabled = false, hasAlerted200m = false;
 
+        // ติดตามตำแหน่งประชาชน
         map.locate({setView: true, maxZoom: 16, watch: true});
         map.on('locationfound', (e) => {
             userLatLng = e.latlng;
@@ -63,7 +64,7 @@
             else userMarker.setLatLng(userLatLng);
         });
 
-        // ฟังก์ชันจัดการรถขยะและเสียง
+        // ดึงพิกัดรถขยะ
         onValue(ref(db, 'truckLocation'), (snapshot) => {
             const d = snapshot.val();
             if (d) {
@@ -89,46 +90,69 @@
             }
         });
 
-        // ฟังก์ชันจัดการหมุดแจ้งเหตุ (ใหม่)
+        // 🟢 ดึงพิกัดแจ้งเหตุขยะ (ม่วง/ส้ม) 🟢
         onValue(ref(db, 'reports'), (snapshot) => {
             const reports = snapshot.val();
-            // ล้างหมุดเดิม
+            
+            // ล้างหมุดเดิมออกก่อนเสมอเพื่ออัปเดตแบบ Real-time
             Object.values(reportMarkers).forEach(m => map.removeLayer(m));
             reportMarkers = {};
 
             if (reports) {
                 Object.keys(reports).forEach(key => {
                     const r = reports[key];
+                    
+                    // แสดงเฉพาะสถานะ pending (รอดำเนินการ)
                     if (r.status === 'pending') {
+                        // แยกสีตามประเภท
                         const colorClass = (r.type === 'ขยะชิ้นใหญ่') ? 'bg-purple' : 'bg-orange';
-                        const reportHtml = `<div class="report-marker-container">
-                            <div class="report-label">${r.phone}</div>
+                        
+                        const reportHtml = `
+                        <div class="report-marker-container">
+                            <div class="report-label">${r.phone || 'ไม่ระบุ'}</div>
                             <div class="circle-icon ${colorClass}"></div>
                         </div>`;
-                        const icon = L.divIcon({ html: reportHtml, iconSize: [100, 40], iconAnchor: [50, 35] });
+                        
+                        // ปรับจุด Anchor ให้ชี้ตรงพิกัดเป๊ะๆ (ตรงกลางล่างของวงกลม)
+                        const icon = L.divIcon({ html: reportHtml, iconSize: [100, 50], iconAnchor: [50, 42] });
                         reportMarkers[key] = L.marker([r.lat, r.lng], { icon: icon }).addTo(map);
                     }
                 });
             }
         });
 
+        // ฟังก์ชันเปิด/ปิดเสียง
         window.toggleAudio = () => {
             isAudioEnabled = !isAudioEnabled;
             document.getElementById('audioToggleBtn').innerHTML = isAudioEnabled ? "🔊" : "🔇";
             document.getElementById('audioToggleBtn').classList.toggle('active');
         };
 
+        // ฟังก์ชันแจ้งเหตุ
         window.sendReport = async (type) => {
             const phone = document.getElementById('reporterPhone').value;
-            if(!phone || !userLatLng) return alert("กรุณาระบุเบอร์โทร");
+            if(!phone || !userLatLng) return alert("กรุณาระบุเบอร์โทรศัพท์และรอให้ระบบระบุตำแหน่งของคุณก่อน");
+            
             const now = new Date();
             const dd = String(now.getDate()).padStart(2, '0');
             const mm = String(now.getMonth() + 1).padStart(2, '0');
             const yy = String(now.getFullYear() + 543).slice(-2);
-            const rId = `D${dd}${mm}${yy}-${Date.now().toString().slice(-3)}`;
+            const datePrefix = `D${dd}${mm}${yy}-`;
             
-            set(push(ref(db, 'reports')), { reportId: rId, type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: Date.now(), status: 'pending' })
-            .then(() => { alert("แจ้งเหตุสำเร็จ รหัส: " + rId); closeModal(); });
+            const snapshot = await get(ref(db, 'reports'));
+            let currentMax = 0;
+            if (snapshot.exists()) {
+                Object.values(snapshot.val()).forEach(r => {
+                    if (r.reportId && r.reportId.startsWith(datePrefix)) {
+                        const runNum = parseInt(r.reportId.split('-')[1]);
+                        if (runNum > currentMax) currentMax = runNum;
+                    }
+                });
+            }
+            const newId = datePrefix + (currentMax + 1);
+            
+            set(push(ref(db, 'reports')), { reportId: newId, type, phone, lat: userLatLng.lat, lng: userLatLng.lng, timestamp: Date.now(), status: 'pending' })
+            .then(() => { alert("แจ้งเหตุสำเร็จ รหัส: " + newId); closeModal(); });
         };
 
         window.openModal = () => document.getElementById('reportModal').style.display = 'flex';
